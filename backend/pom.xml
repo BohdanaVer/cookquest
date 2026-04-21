@@ -8,11 +8,11 @@
 		<version>4.0.5</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.example</groupId>
-	<artifactId>cook-quest</artifactId>
+	<groupId>com.cookquest</groupId>
+	<artifactId>cookquest</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
+	<name>cookquest</name>
+	<description>CookQuest Backend API</description>
 	<url/>
 	<licenses>
 		<license/>
