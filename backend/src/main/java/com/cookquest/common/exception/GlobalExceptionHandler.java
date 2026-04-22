@@ -3,20 +3,21 @@ package com.cookquest.common.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-@Slf4j // Автоматично створює змінну log для логування
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // 1. Перехоплюємо НАШІ бізнес-помилки
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ErrorResponse> handleAppException(AppException ex) {
-        // Логуємо: якщо помилка сервера (500) - як ERROR, інакше як WARN
         if (ex.getHttpStatus().is5xxServerError()) {
             log.error("Внутрішня помилка [{}]: {}", ex.getErrorCode(), ex.getMessage(), ex);
         } else {
@@ -27,16 +28,15 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(ex.getHttpStatus().value())
                 .errorCode(ex.getErrorCode().name())
-                .message(ex.getMessage()) // Це повідомлення побачить фронтенд
+                .message(ex.getMessage())
                 .build();
 
         return new ResponseEntity<>(response, ex.getHttpStatus());
     }
 
-    // 2. Перехоплюємо будь-які НЕОЧІКУВАНІ збої (наприклад NullPointerException)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex) {
-        log.error("Неочікуваний системний збій!", ex); // Логуємо повний стектрейс
+        log.error("Неочікуваний системний збій!", ex);
 
         ErrorResponse response = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
@@ -50,24 +50,22 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
 
-        // Збираємо всі помилки валідації в один рядок.
-        // Наприклад: "password: не може бути порожнім, email: має бути коректним"
-        String errorMessage = ex.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .collect(Collectors.joining(", "));
+        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
+            errors.put(error.getField(), error.getDefaultMessage());
+        }
 
-        log.warn("Помилка валідації: {}", errorMessage);
-
-        ErrorResponse response = ErrorResponse.builder()
+        ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value()) // Статус 400
-                .errorCode(ErrorCode.VALIDATION_ERROR.name()) // Використовуємо твій Enum!
-                .message(errorMessage)
+                .status(HttpStatus.BAD_REQUEST.value())
+                .errorCode(ErrorCode.VALIDATION_ERROR.name())
+                .message("Validation failed for one or more fields")
+                .validationErrors(errors)
                 .build();
 
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 }
 
