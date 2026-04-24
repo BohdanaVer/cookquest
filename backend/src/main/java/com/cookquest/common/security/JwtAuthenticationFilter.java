@@ -32,7 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
-        final String userEmail;
+        String userEmail = null;
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -41,7 +41,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         jwt = authHeader.substring(7);
 
-        userEmail = jwtService.extractUsername(jwt);
+        try {
+            userEmail = jwtService.extractUsername(jwt);
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            // Токен прострочений. Ми не кидаємо помилку, а просто логуємо або ігноруємо.
+            // Spring Security побачить, що userEmail == null і сам відмовить у доступі.
+            System.out.println("JWT is expired: " + e.getMessage());
+        } catch (Exception e) {
+            // Відловлюємо інші проблеми з токеном (наприклад, підроблений підпис)
+            System.out.println("Invalid JWT token: " + e.getMessage());
+        }
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
