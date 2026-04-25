@@ -1,0 +1,46 @@
+{
+  "profile": {
+    "title": "Profile",
+    "savedRecipes": "Saved recipes",
+    "noRecipes": "No recipes yet. Time to cook!",
+    "myMascot": "My mascot",
+    "mascotName": "Broccoli",
+    "mascotDesc": "Cheerful veggie friend. Starter mascot!",
+    "changeInShop": "Change in shop →",
+    "appLanguage": "App Language",
+    "ukrainian": "Українська",
+    "english": "English",
+    "preferences": "Culinary preferences",
+    "dietType": "Diet Type",
+    "allergens": "Allergens",
+    "dislikes": "I do not like (ingredients)",
+    "dislikesPlaceholder": "E.g.: cilantro, mushrooms...",
+    "additionalWishes": "Additional wishes",
+    "wishesPlaceholder": "E.g.: less salt, no spicy...",
+    "savePrefs": "Save preferences",
+    "saving": "Saving...",
+    "loading": "Loading...",
+    "rank": "Rank",
+    "level": "Level",
+    "balance": "Balance",
+    "rating": "Rating",
+    "diets": {
+      "none": "No limits",
+      "vegetarian": "Vegetarian",
+      "vegan": "Vegan",
+      "pescatarian": "Pescatarian",
+      "keto": "Keto",
+      "paleo": "Paleo"
+    },
+    "allergenList": {
+      "gluten": "Gluten",
+      "dairy": "Dairy",
+      "nuts": "Nuts",
+      "eggs": "Eggs",
+      "soy": "Soy",
+      "seafood": "Seafood",
+      "lactose": "Lactose",
+      "honey": "Honey"
+    }
+  }
+}

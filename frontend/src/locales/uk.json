@@ -1,0 +1,46 @@
+{
+  "profile": {
+    "title": "Профіль",
+    "savedRecipes": "Збережені рецепти",
+    "noRecipes": "Ще немає рецептів. Час готувати!",
+    "myMascot": "Мій маскот",
+    "mascotName": "Броколі",
+    "mascotDesc": "Веселий друг-овоч. Стартовий маскот!",
+    "changeInShop": "Змінити в магазині →",
+    "appLanguage": "Мова додатку",
+    "ukrainian": "Українська",
+    "english": "English",
+    "preferences": "Кулінарні вподобання",
+    "dietType": "Тип харчування",
+    "allergens": "Алергени",
+    "dislikes": "Не люблю (продукти)",
+    "dislikesPlaceholder": "Напр.: кінза, гриби...",
+    "additionalWishes": "Додаткові побажання",
+    "wishesPlaceholder": "Напр.: без гострого, мало солі...",
+    "savePrefs": "Зберегти вподобання",
+    "saving": "Зберігаю...",
+    "loading": "Завантаження...",
+    "rank": "Ранг",
+    "level": "Рівень",
+    "balance": "Баланс",
+    "rating": "Рейтинг",
+    "diets": {
+      "none": "Без обмежень",
+      "vegetarian": "Вегетаріанець",
+      "vegan": "Веган",
+      "pescatarian": "Пескетаріанець",
+      "keto": "Кето",
+      "paleo": "Палео"
+    },
+    "allergenList": {
+      "gluten": "Глютен",
+      "dairy": "Молочні продукти",
+      "nuts": "Горіхи",
+      "eggs": "Яйця",
+      "soy": "Соя",
+      "seafood": "Морепродукти",
+      "lactose": "Лактоза",
+      "honey": "Мед"
+    }
+  }
+}
