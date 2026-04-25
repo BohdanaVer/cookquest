@@ -9,3 +9,4 @@ frontend/.env
 backend/target/
 backend/*.iml
 backend/application-dev.properties
+backend/src/main/resources/application.properties
