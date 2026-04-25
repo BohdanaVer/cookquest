@@ -10,7 +10,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User { // ТУТ ПРИБРАНО implements UserDetails
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

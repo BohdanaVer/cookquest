@@ -73,6 +73,7 @@ public class ProfileService {
     private UserProfileResponse mapToResponse(UserProfile p) {
         return new UserProfileResponse(
                 p.getId(),
+                p.getUser().getUsername(),
                 p.getXp(),
                 p.getLevel(),
                 p.getBalance(),
