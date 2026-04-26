@@ -1,37 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ShoppingBag, Wand2, Sparkles, Lock, Check } from 'lucide-react'
 import { cn } from '../lib/utils'
 import Mascot from '../components/mascot'
+import { api } from '../api/axiosClient'
+import { useTranslation } from 'react-i18next'
 
 // ============================================================================
-// GENERATOR VISUAL CONSTANTS
+// GENERATOR CONSTANTS (Тільки ключі та іконки)
 // ============================================================================
 const TYPES = [
-    { id: 'chef', icon: '👨‍🍳', label: 'Шеф' },
-    { id: 'ingredient', icon: '🍅', label: 'Інгред.' },
-    { id: 'dish', icon: '🍲', label: 'Страва' },
-    { id: 'appliance', icon: '🍳', label: 'Прилад' },
-    { id: 'animal', icon: '🐻', label: 'Тварина' },
-    { id: 'trophy', icon: '🏆', label: 'Трофей' },
+    { id: 'chef', icon: '👨‍🍳' },
+    { id: 'ingredient', icon: '🍅' },
+    { id: 'dish', icon: '🍲' },
+    { id: 'appliance', icon: '🍳' },
+    { id: 'animal', icon: '🐻' },
+    { id: 'trophy', icon: '🏆' },
 ]
 
-const STYLES = [
-    { id: 'cartoon', label: 'Мульт' },
-    { id: 'chibi',   label: 'Чіббі' },
-    { id: 'pixel',   label: 'Піксель' },
-    { id: 'flat',    label: 'Flat' },
-    { id: '3d',      label: '3D' },
-    { id: 'fantasy', label: 'Фентезі' },
-]
-
-const PERSONALITIES = [
-    { id: 'happy', label: '😄 Веселий' },
-    { id: 'brave', label: '💪 Відважний' },
-    { id: 'cute',  label: '🥰 Милий' },
-    { id: 'wise',  label: '🧐 Мудрий' },
-    { id: 'energetic', label: '⚡ Живий' },
-    { id: 'mischievous', label: '😏 Шибеник' },
-]
+const STYLES = ['cartoon', 'chibi', 'pixel', 'flat', '3d', 'fantasy']
+const PERSONALITIES = ['happy', 'brave', 'cute', 'wise', 'energetic', 'mischievous']
 
 const COLORS = [
     { id: 'red', hex: '#EF4444' },
@@ -56,23 +43,49 @@ const RARITY_COLORS = {
 // VISUAL TEMPLATE OF SHOP GRID
 // ============================================================================
 const MOCK_GRID = [
-    { id: 'broccoli', name: 'Броколі', description: 'Веселий друг-овоч. Стартовий маскот!', rarity: 'common', state: 'active' },
-    { id: 'slime', name: 'Слаймі', description: 'Милий зелений слайм, що тягнеться до знань', rarity: 'common', state: 'price', price: 100 },
-    { id: 'cheese', name: 'Сирко', description: 'Справжній сирний магнат на твоїй кухні', rarity: 'rare', state: 'price', price: 200 },
-    { id: 'pepper', name: 'Перчик', description: 'Гострий та запальний помічник', rarity: 'rare', state: 'price', price: 300 },
-    { id: 'icecream', name: 'Морозко', description: 'Холодний, але з теплим серцем', rarity: 'epic', state: 'price', price: 500 },
-    { id: 'stove', name: 'Пічка', description: 'Хранитель вогню та смаку', rarity: 'epic', state: 'price', price: 500 },
-    { id: 'cauldron', name: 'Казанок', description: 'Майстер магічної кулінарії', rarity: 'epic', state: 'price', price: 800 },
-    { id: 'knightpan', name: 'Лицар', description: 'Непереможний воїн кухні!', rarity: 'legendary', state: 'price', price: 1500 },
+    { id: 'broccoli', rarity: 'common', state: 'active' },
+    { id: 'slime', rarity: 'common', state: 'price', price: 100 },
+    { id: 'cheese', rarity: 'rare', state: 'price', price: 200 },
+    { id: 'pepper', rarity: 'rare', state: 'price', price: 300 },
+    { id: 'icecream', rarity: 'epic', state: 'price', price: 500 },
+    { id: 'stove', rarity: 'epic', state: 'price', price: 500 },
+    { id: 'cauldron', rarity: 'epic', state: 'price', price: 800 },
+    { id: 'knightpan', rarity: 'legendary', state: 'price', price: 1500 },
 ]
 
 export default function Shop() {
+    const { t, i18n } = useTranslation()
+
     const [type, setType] = useState('chef')
     const [style, setStyle] = useState('cartoon')
     const [personality, setPersonality] = useState('happy')
     const [color, setColor] = useState('orange')
 
-    const balance = ""
+    const [user, setUser] = useState<any>(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await api.get('/api/v1/profiles/me')
+                const data = response.data
+                setUser(data)
+
+                if (data.language) {
+                    i18n.changeLanguage(data.language.toUpperCase())
+                }
+            } catch (error) {
+                console.error("Помилка завантаження даних магазину", error)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchProfile()
+    }, [i18n])
+
+    const balance = user?.balance ?? 0
+    const activeMascotId = user?.activeMascot || "broccoli"
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500 pb-10">
@@ -83,95 +96,93 @@ export default function Shop() {
                         <ShoppingBag size={20} className="text-purple-400" />
                     </div>
                     <div>
-                        <h1 className="text-lg font-extrabold text-white">Магазин</h1>
+                        <h1 className="text-lg font-extrabold text-white">{t('shop.title')}</h1>
                         <p className="text-xs text-gray-400">
-                            Баланс: <span className="text-yellow-400 font-bold text-sm">💰 {balance}</span>
+                            {t('shop.balance')} <span className="text-yellow-400 font-bold text-sm">💰 {loading ? "..." : balance}</span>
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* ACTIVE MASCOT(MOCK) */}
             <div className="bg-[#1a1a2e] rounded-2xl border border-orange-500/20 p-4">
-                <p className="text-[10px] text-orange-400 font-bold uppercase tracking-wider mb-2">Активний</p>
+                <p className="text-[10px] text-orange-400 font-bold uppercase tracking-wider mb-2">{t('shop.activeLabel')}</p>
                 <div className="flex items-center gap-4">
-                    <Mascot name="broccoli" mood="happy" size={72} animation="bounce" interactive />
+                    <Mascot name={activeMascotId as any} mood="happy" size={72} animation="bounce" interactive />
                     <div>
-                        <p className="font-bold text-white text-lg">Броколі</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Веселий друг-овоч</p>
+                        <p className="font-bold text-white text-lg">{t(`shop.items.${activeMascotId}.name`, t('shop.items.broccoli.name'))}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{t(`shop.items.${activeMascotId}.desc`, t('shop.items.broccoli.desc'))}</p>
                     </div>
                 </div>
             </div>
 
-            {/* MASCOT GENERATOR(MOCK) */}
             <div className="bg-[#1a1a2e] rounded-2xl border border-purple-500/30 p-4 space-y-4">
                 <div className="flex items-center gap-2">
                     <div className="w-9 h-9 bg-purple-500/20 rounded-xl flex items-center justify-center">
                         <Wand2 size={18} className="text-purple-400" />
                     </div>
                     <div>
-                        <p className="font-bold text-white text-sm">Генератор маскотів</p>
-                        <p className="text-[10px] text-gray-500">ШІ • Stability AI • 3 емоції</p>
+                        <p className="font-bold text-white text-sm">{t('shop.generatorTitle')}</p>
+                        <p className="text-[10px] text-gray-500">{t('shop.generatorSubtitle')}</p>
                     </div>
                 </div>
 
                 <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">Тип</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">{t('shop.type')}</p>
                     <div className="grid grid-cols-3 gap-1.5">
-                        {TYPES.map(t => (
+                        {TYPES.map(tItem => (
                             <button
-                                key={t.id}
-                                onClick={() => setType(t.id)}
+                                key={tItem.id}
+                                onClick={() => setType(tItem.id)}
                                 className={cn(
                                     'flex flex-col items-center gap-0.5 py-2 rounded-xl border text-xs transition-all',
-                                    type === t.id ? 'border-purple-500 bg-purple-500/20 text-white' : 'border-white/5 bg-white/[0.03] text-gray-400'
+                                    type === tItem.id ? 'border-purple-500 bg-purple-500/20 text-white' : 'border-white/5 bg-white/[0.03] text-gray-400'
                                 )}
                             >
-                                <span className="text-lg leading-none">{t.icon}</span>
-                                <span className="text-[10px]">{t.label}</span>
+                                <span className="text-lg leading-none">{tItem.icon}</span>
+                                <span className="text-[10px]">{t(`shop.types.${tItem.id}`)}</span>
                             </button>
                         ))}
                     </div>
                 </div>
 
                 <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">Стиль</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">{t('shop.style')}</p>
                     <div className="grid grid-cols-3 gap-1.5">
                         {STYLES.map(s => (
                             <button
-                                key={s.id}
-                                onClick={() => setStyle(s.id)}
+                                key={s}
+                                onClick={() => setStyle(s)}
                                 className={cn(
                                     'py-1.5 rounded-xl border text-xs transition-all',
-                                    style === s.id ? 'border-purple-500 bg-purple-500/20 text-white' : 'border-white/5 bg-white/[0.03] text-gray-400'
+                                    style === s ? 'border-purple-500 bg-purple-500/20 text-white' : 'border-white/5 bg-white/[0.03] text-gray-400'
                                 )}
                             >
-                                {s.label}
+                                {t(`shop.styles.${s}`)}
                             </button>
                         ))}
                     </div>
                 </div>
 
                 <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">Характер</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">{t('shop.personality')}</p>
                     <div className="grid grid-cols-3 gap-1.5">
                         {PERSONALITIES.map(p => (
                             <button
-                                key={p.id}
-                                onClick={() => setPersonality(p.id)}
+                                key={p}
+                                onClick={() => setPersonality(p)}
                                 className={cn(
                                     'py-1.5 rounded-xl border text-[10px] transition-all',
-                                    personality === p.id ? 'border-purple-500 bg-purple-500/20 text-white' : 'border-white/5 bg-white/[0.03] text-gray-400'
+                                    personality === p ? 'border-purple-500 bg-purple-500/20 text-white' : 'border-white/5 bg-white/[0.03] text-gray-400'
                                 )}
                             >
-                                {p.label}
+                                {t(`shop.personalities.${p}`)}
                             </button>
                         ))}
                     </div>
                 </div>
 
                 <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">Колір</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">{t('shop.color')}</p>
                     <div className="flex flex-wrap gap-2">
                         {COLORS.map(c => (
                             <button
@@ -192,11 +203,11 @@ export default function Shop() {
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all bg-gradient-to-r from-purple-600 to-violet-600 active:scale-95 text-white hover:opacity-90"
                 >
                     <Sparkles size={16} />
-                    Згенерувати маскота
+                    {t('shop.generateBtn')}
                 </button>
             </div>
 
-            {/* MASCOT GRID(MOCK) */}
+            {/* MASCOT GRID */}
             <div className="grid grid-cols-2 gap-3">
                 {MOCK_GRID.map((item) => (
                     <div
@@ -209,7 +220,7 @@ export default function Shop() {
                     >
                         <div className="flex justify-center mb-2">
                             <div className={cn('relative', item.state === 'price' && 'opacity-50 grayscale')}>
-                                <img src={`/mascots/${item.id}_happy.png`} alt={item.name} className="w-[72px] h-[72px] drop-shadow-md" />
+                                <img src={`/mascots/${item.id}_happy.png`} alt={t(`shop.items.${item.id}.name`)} className="w-[72px] h-[72px] drop-shadow-md" />
                                 {item.state === 'price' && (
                                     <div className="absolute inset-0 flex items-center justify-center">
                                         <Lock size={24} className="text-gray-400 drop-shadow-lg" />
@@ -218,19 +229,19 @@ export default function Shop() {
                             </div>
                         </div>
 
-                        <h3 className="font-bold text-white text-center text-sm">{item.name}</h3>
-                        <p className="text-[10px] text-gray-500 text-center mt-0.5 line-clamp-2 min-h-[30px]">{item.description}</p>
+                        <h3 className="font-bold text-white text-center text-sm">{t(`shop.items.${item.id}.name`)}</h3>
+                        <p className="text-[10px] text-gray-500 text-center mt-0.5 line-clamp-2 min-h-[30px]">{t(`shop.items.${item.id}.desc`)}</p>
 
                         <div className="flex justify-center mt-2">
-              <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-bold', RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS])}>
-                {item.rarity === 'common' ? 'Звичайний' : item.rarity === 'rare' ? 'Рідкісний' : item.rarity === 'epic' ? 'Епічний' : 'Легендарний'}
-              </span>
+                            <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-bold', RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS])}>
+                                {t(`shop.rarities.${item.rarity}`)}
+                            </span>
                         </div>
 
                         <div className="mt-3">
                             {item.state === 'active' ? (
                                 <div className="w-full text-center py-2 text-orange-400 text-xs font-bold flex items-center justify-center gap-1">
-                                    <Check size={14} /> Активний
+                                    <Check size={14} /> {t('shop.states.active')}
                                 </div>
                             ) : (
                                 <button className="w-full bg-orange-500 text-white font-bold py-2 rounded-xl text-xs hover:bg-orange-400 transition-colors">

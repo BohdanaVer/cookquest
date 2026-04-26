@@ -4,11 +4,9 @@ import { BookOpen, Zap, Settings, X, Plus } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { MascotStatic } from '../components/mascot'
 import { api } from "../api/axiosClient"
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
-// ============================================================================
-// SETTINGS CONSTANTS
-// ============================================================================
 const DIET_KEYS = [
     { key: 'none', emoji: '🍽️' },
     { key: 'vegetarian', emoji: '🥬' },
@@ -29,18 +27,38 @@ const ALLERGEN_KEYS = [
     { key: 'honey', emoji: '🍯' },
 ]
 
+interface UserProfileData {
+    username?: string;
+    level?: number;
+    levelName?: string;
+    xp?: number;
+    max_xp?: number;
+    balance?: number;
+    ratingScore?: number;
+    rating_score?: number;
+    activeMascot?: string;
+    language?: string;
+    dietaryPreferences?: {
+        diet?: string;
+        allergens?: string[];
+        dislikes?: string[];
+        customNote?: string;
+    };
+}
+
+type MascotName = "broccoli" | "slime" | "cheese" | "pepper" | "icecream" | "stove" | "cauldron" | "knightpan";
+
 export default function Profile() {
+    const { t, i18n } = useTranslation();
+
+    const [language, setLanguage] = useState(() => i18n.language?.toUpperCase() || 'UK')
     const [diet, setDiet] = useState('none')
     const [allergens, setAllergens] = useState<string[]>([])
     const [dislikes, setDislikes] = useState<string[]>([])
     const [customNote, setCustomNote] = useState('')
     const [dislikeInput, setDislikeInput] = useState('')
     const [saving, setSaving] = useState(false)
-    const [language, setLanguage] = useState('UK')
-
-    const { t, i18n } = useTranslation();
-
-    const [user, setUser] = useState<any>(null)
+    const [user, setUser] = useState<UserProfileData | null>(null)
     const [loading, setLoading] = useState(true)
 
     const activeMascot = user?.activeMascot || "broccoli"
@@ -52,12 +70,13 @@ export default function Profile() {
                 const data = response.data;
                 setUser(data);
 
-                if (data.preferences) {
-                    setDiet(data.preferences.diet || 'none');
-                    setAllergens(data.preferences.allergens || []);
-                    setDislikes(data.preferences.dislikes || []);
-                    setCustomNote(data.preferences.customNote || '');
+                if (data.dietaryPreferences) {
+                    setDiet(data.dietaryPreferences.diet || 'none');
+                    setAllergens(data.dietaryPreferences.allergens || []);
+                    setDislikes(data.dietaryPreferences.dislikes || []);
+                    setCustomNote(data.dietaryPreferences.customNote || '');
                 }
+
                 if (data.language) {
                     const dbLang = data.language.toUpperCase();
                     setLanguage(dbLang);
@@ -71,20 +90,24 @@ export default function Profile() {
         };
 
         fetchProfile();
-    }, []);
+    }, [i18n]);
 
     const handleSave = async () => {
         setSaving(true);
         try {
             const response = await api.patch('/api/v1/profiles/me/preferences', {
-                diet: diet,
-                allergens: allergens,
-                dislikes: dislikes,
-                customNote: customNote
+                diet,
+                allergens,
+                dislikes,
+                customNote
             });
             setUser(response.data);
+
+            toast.success(t('profile.saveSuccess'));
+
         } catch (error) {
             console.error("Помилка збереження налаштувань", error);
+            toast.error(t('profile.saveError'));
         } finally {
             setSaving(false);
         }
@@ -93,11 +116,8 @@ export default function Profile() {
     const handleLanguageChange = async (newLang: string) => {
         setLanguage(newLang);
         i18n.changeLanguage(newLang);
-
         try {
-            await api.patch('/api/v1/profiles/me/language', {
-                language: newLang
-            });
+            await api.patch('/api/v1/profiles/me/language', { language: newLang });
         } catch (error) {
             console.error("Помилка збереження мови", error);
         }
@@ -118,7 +138,9 @@ export default function Profile() {
         setDislikes(prev => prev.filter(d => d !== item))
     }
 
-    const xpProgress = user && user.max_xp ? (user.xp / user.max_xp) * 100 : 0;
+    const currentXp = user?.xp || 0;
+    const maxXp = user?.max_xp || 0;
+    const xpProgress = maxXp > 0 ? (currentXp / maxXp) * 100 : 0;
     const radius = 35;
     const circumference = 2 * Math.PI * radius;
     const dashOffset = circumference - (xpProgress / 100) * circumference;
@@ -186,7 +208,7 @@ export default function Profile() {
                     {t('profile.savedRecipes')} (0)
                 </h2>
                 <div className="py-4 text-center">
-                    <MascotStatic name={activeMascot as any} mood="neutral" size={100} message={t('profile.noRecipes')} />
+                    <MascotStatic name={activeMascot as MascotName} mood="neutral" size={100} message={t('profile.noRecipes')} />
                 </div>
             </div>
 
@@ -195,7 +217,7 @@ export default function Profile() {
                     {t('profile.myMascot')}
                 </h2>
                 <div className="flex items-center gap-4">
-                    <MascotStatic name={activeMascot as any} mood="happy" size={64} />
+                    <MascotStatic name={activeMascot as MascotName} mood="happy" size={64} />
                     <div>
                         <p className="font-bold text-white">{t('profile.mascotName')}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{t('profile.mascotDesc')}</p>

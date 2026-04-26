@@ -41,6 +41,117 @@
       "seafood": "Seafood",
       "lactose": "Lactose",
       "honey": "Honey"
+    },
+    "saveSuccess": "Preferences saved successfully!",
+    "saveError": "Error while saving",
+    "saving": "Saving..."
+  },
+
+  "shop": {
+    "title": "Shop",
+    "balance": "Balance:",
+    "activeLabel": "Active",
+    "generatorTitle": "Mascot Generator",
+    "generatorSubtitle": "AI • Stability AI • 3 emotions",
+    "type": "Type",
+    "style": "Style",
+    "personality": "Personality",
+    "color": "Color",
+    "generateBtn": "Generate Mascot",
+    "types": {
+      "chef": "Chef", "ingredient": "Ingred.", "dish": "Dish", "appliance": "Appliance", "animal": "Animal", "trophy": "Trophy"
+    },
+    "styles": {
+      "cartoon": "Cartoon", "chibi": "Chibi", "pixel": "Pixel", "flat": "Flat", "3d": "3D", "fantasy": "Fantasy"
+    },
+    "personalities": {
+      "happy": "😄 Happy", "brave": "💪 Brave", "cute": "🥰 Cute", "wise": "🧐 Wise", "energetic": "⚡ Energetic", "mischievous": "😏 Mischievous"
+    },
+    "rarities": {
+      "common": "Common", "rare": "Rare", "epic": "Epic", "legendary": "Legendary"
+    },
+    "states": {
+      "active": "Active",
+      "owned": "Owned"
+    },
+    "items": {
+      "broccoli": { "name": "Broccoli", "desc": "Cheerful veggie friend. Starter mascot!" },
+      "slime": { "name": "Slimey", "desc": "Cute green slime reaching for knowledge" },
+      "cheese": { "name": "Cheesy", "desc": "True cheese magnate in your kitchen" },
+      "pepper": { "name": "Peppy", "desc": "Spicy and fiery assistant" },
+      "icecream": { "name": "Frosty", "desc": "Cold, but with a warm heart" },
+      "stove": { "name": "Oven", "desc": "Keeper of fire and taste" },
+      "cauldron": { "name": "Cauldron", "desc": "Master of magical cooking" },
+      "knightpan": { "name": "Knight", "desc": "Invincible warrior of the kitchen!" }
     }
+  },
+
+  "leaderboard": {
+    "title": "Leaderboard",
+    "yourRank": "Your rank:",
+    "noParticipants": "No participants yet"
+  },
+
+  "friends": {
+    "title": "Friends",
+    "friendsCount": "{{count}} friends",
+    "findUser": "Find user",
+    "searchPlaceholder": "Username...",
+    "myFriends": "My friends ({{count}})",
+    "noFriendsTitle": "You don't have any friends yet.",
+    "noFriendsSub": "Use the search above to find them!"
+  },
+
+  "generate": {
+    "mascotSelect": "Choose a recipe!",
+    "mascotFound": "Here is what I found!",
+    "mascotStart": "What are we cooking?",
+    "selectBtn": "Select",
+    "findRecipesBtn": "Find recipes",
+    "photoTab": "Photo",
+    "generatorTab": "Generator",
+    "cameraBtn": "Camera",
+    "galleryBtn": "Gallery",
+    "maxPhotosError": "Maximum 3 photos",
+    "promptPlaceholder": "Describe your wishes...",
+    "myFridge": "My fridge",
+    "processing": "Processing...",
+    "detectAndFindBtn": "Detect ingredients & find",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    }
+  },
+
+  "home": {
+    "loading": "Loading...",
+    "welcome": "Hello, {{name}}!",
+    "defaultRank": "Experienced Chef",
+    "recipesCooked": "Recipes",
+    "questsCompleted": "Quests",
+    "rating": "Rating",
+    "battleChallenge": "{{name}} challenges you!",
+    "battleBadge": "BATTLE",
+    "questOfDay": "Daily Quest",
+    "cuisineSuffix": "{{cuisine}} cuisine",
+    "completeQuest": "Complete Quest",
+    "cuisineWeek": "{{cuisine}} Cuisine Week",
+    "cuisineWeekDesc": "Cook and earn bonus points",
+    "scanPhoto": "Photo Scan",
+    "scanPhotoDesc": "AI will detect ingredients",
+    "generator": "Generator",
+    "generatorDesc": "AI will pick a recipe",
+    "leaderboard": "Leaderboard",
+    "yourRating": "Your rating: #{{score}}"
+  },
+
+  "nav": {
+    "home": "Home",
+    "recipes": "Recipes",
+    "quests": "Quests",
+    "ranking": "Rating",
+    "shop": "Shop",
+    "friends": "Friends"
   }
 }

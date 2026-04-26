@@ -3,12 +3,21 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, ChefHat, Target, Trophy, ShoppingBag, Users, LogOut } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { api } from '../api/axiosClient';
+import { useTranslation } from 'react-i18next';
+
+interface UserProfileData {
+  balance?: number;
+  ratingScore?: number;
+  rating_score?: number;
+  activeMascot?: string;
+}
 
 export default function MainLayout() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserProfileData | null>(null);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -33,17 +42,18 @@ export default function MainLayout() {
   };
 
   const navItems = [
-    { href: '/home', icon: Home, label: 'Головна' },
-    { href: '/generate', icon: ChefHat, label: 'Рецепти' },
-    { href: '/challenges', icon: Target, label: 'Квести' },
-    { href: '/leaderboard', icon: Trophy, label: 'Рейтинг' },
-    { href: '/shop', icon: ShoppingBag, label: 'Магазин' },
-    { href: '/friends', icon: Users, label: 'Друзі' },
+    { href: '/home', icon: Home, label: t('nav.home') },
+    { href: '/generate', icon: ChefHat, label: t('nav.recipes') },
+    { href: '/challenges', icon: Target, label: t('nav.quests') },
+    { href: '/leaderboard', icon: Trophy, label: t('nav.ranking') },
+    { href: '/shop', icon: ShoppingBag, label: t('nav.shop') },
+    { href: '/friends', icon: Users, label: t('nav.friends') },
   ];
 
   return (
-      <div className="min-h-screen bg-[#0f0f23] text-white flex flex-col relative">
-        <nav className="bg-[#1a1a2e]/90 backdrop-blur-md border-b border-white/5 sticky top-0 z-50">
+      <div className="min-h-[100dvh] bg-[#0f0f23] text-white flex flex-col relative">
+
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-[#1a1a2e]/90 backdrop-blur-md border-b border-white/5">
           <div className="max-w-4xl mx-auto px-4">
             <div className="flex items-center justify-between h-12">
               <Link to="/home" className="flex items-center gap-2 font-bold text-orange-400">
@@ -71,7 +81,7 @@ export default function MainLayout() {
           </div>
         </nav>
 
-        <main className="flex-1 w-full max-w-lg mx-auto overflow-y-auto px-4 py-4 pb-24">
+        <main className="flex-1 w-full max-w-lg mx-auto px-4 pt-16 pb-24">
           <Outlet />
         </main>
 

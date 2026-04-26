@@ -4,12 +4,28 @@ import { Camera, Shuffle, Swords, Target, Zap, Trophy } from 'lucide-react';
 import { MascotStatic } from '../components/mascot';
 import { useActiveMascot } from '../components/mascot-provider';
 import { getLevelInfo, getXpProgress } from '../lib/utils';
-import { api } from '../api/axiosClient'; // Підключаємо твій клієнт
+import { api } from '../api/axiosClient';
+import { useTranslation } from 'react-i18next';
+
+type MascotName = "broccoli" | "slime" | "cheese" | "pepper" | "icecream" | "stove" | "cauldron" | "knightpan";
+
+interface UserProfileData {
+  username?: string;
+  level?: number;
+  levelName?: string;
+  xp?: number;
+  max_xp?: number;
+  balance?: number;
+  ratingScore?: number;
+  rating_score?: number;
+  activeMascot?: string;
+}
 
 export default function Home() {
+  const { t } = useTranslation();
   const globalActiveMascot = useActiveMascot();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,6 +45,7 @@ export default function Home() {
 
   const totalCooked = 0;
   const totalCompleted = 0;
+
   const cuisine = 'Італійська';
 
   const todayChallenge = {
@@ -39,7 +56,7 @@ export default function Home() {
   const pendingBattles: any[] = [];
 
   const currentXp = user?.xp || 0;
-  const ratingScore = user?.ratingScore || 0;
+  const ratingScore = user?.ratingScore || user?.rating_score || 0;
   const levelInfo = getLevelInfo(currentXp);
   const xpProgress = getXpProgress(currentXp);
   const displayLevel = user?.level || levelInfo?.level || 1;
@@ -55,10 +72,10 @@ export default function Home() {
 
         <div className="flex justify-center animate-slide-up">
           <MascotStatic
-              name={activeMascot as any}
+              name={activeMascot as MascotName}
               mood="happy"
               size={100}
-              message={loading ? "Завантаження..." : `Вітаю, ${username}!`}
+              message={loading ? t('home.loading') : t('home.welcome', { name: username })}
           />
         </div>
 
@@ -82,9 +99,11 @@ export default function Home() {
 
             <div className="flex-1 min-w-0">
               <h1 className="text-lg font-extrabold text-white truncate">
-                {loading ? 'Завантаження...' : username}
+                {loading ? t('home.loading') : username}
               </h1>
-              <p className="text-xs text-gray-400 font-medium">{levelInfo?.name || 'Досвідчений кухар'}</p>
+              <p className="text-xs text-gray-400 font-medium">
+                {levelInfo?.name || t('home.defaultRank')}
+              </p>
               <div className="mt-2 flex items-center gap-1.5">
                 <Zap size={12} className="text-green-400" />
                 <div className="flex-1 bg-white/5 rounded-full h-2 overflow-hidden">
@@ -98,20 +117,19 @@ export default function Home() {
           <div className="grid grid-cols-3 gap-2 mt-4">
             <div className="bg-white/5 rounded-xl p-2.5 text-center">
               <p className="text-lg font-extrabold text-yellow-400">{totalCooked}</p>
-              <p className="text-[10px] text-gray-500 font-medium">Рецептів</p>
+              <p className="text-[10px] text-gray-500 font-medium">{t('home.recipesCooked')}</p>
             </div>
             <div className="bg-white/5 rounded-xl p-2.5 text-center">
               <p className="text-lg font-extrabold text-purple-400">{totalCompleted}</p>
-              <p className="text-[10px] text-gray-500 font-medium">Квестів</p>
+              <p className="text-[10px] text-gray-500 font-medium">{t('home.questsCompleted')}</p>
             </div>
             <div className="bg-white/5 rounded-xl p-2.5 text-center">
               <p className="text-lg font-extrabold text-orange-400">{ratingScore}</p>
-              <p className="text-[10px] text-gray-500 font-medium">Рейтинг</p>
+              <p className="text-[10px] text-gray-500 font-medium">{t('home.rating')}</p>
             </div>
           </div>
         </div>
 
-        {/* Виклики на батл */}
         {pendingBattles.length > 0 && (
             <div className="space-y-2 animate-slide-up" style={{ animationDelay: '0.1s' }}>
               {pendingBattles.map((battle) => (
@@ -121,17 +139,20 @@ export default function Home() {
                         <Swords size={20} className="text-red-400" />
                       </div>
                       <div className="flex-1">
-                        <p className="font-bold text-red-300 text-sm">{battle.challenger.username} кидає виклик!</p>
+                        <p className="font-bold text-red-300 text-sm">
+                          {t('home.battleChallenge', { name: battle.challenger.username })}
+                        </p>
                         <p className="text-xs text-red-400/60">{battle.recipe.name}</p>
                       </div>
-                      <span className="text-xs text-red-400 font-bold bg-red-500/20 px-2 py-1 rounded-lg">БАТЛ</span>
+                      <span className="text-xs text-red-400 font-bold bg-red-500/20 px-2 py-1 rounded-lg">
+                        {t('home.battleBadge')}
+                      </span>
                     </div>
                   </div>
               ))}
             </div>
         )}
 
-        {/* Конкретний щоденний квест */}
         {todayChallenge && (
             <div className="animate-slide-up" style={{ animationDelay: '0.15s' }}>
               <div className="relative overflow-hidden bg-gradient-to-br from-purple-600/20 to-violet-600/20 border border-purple-500/20 rounded-2xl p-5 hover:border-purple-500/40 transition-all cursor-pointer">
@@ -143,19 +164,18 @@ export default function Home() {
                     <Target size={20} className="text-purple-400" />
                   </div>
                   <div>
-                    <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">Квест дня</p>
-                    <p className="text-xs text-gray-500">{cuisine} кухня</p>
+                    <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">{t('home.questOfDay')}</p>
+                    <p className="text-xs text-gray-500">{t('home.cuisineSuffix', { cuisine: cuisine })}</p>
                   </div>
                 </div>
                 <p className="text-sm font-bold text-white mt-1">{todayChallenge.description}</p>
                 <div className="mt-3 bg-purple-500 hover:bg-purple-400 text-white text-center font-bold py-2 rounded-xl text-sm transition-colors">
-                  Виконати квест
+                  {t('home.completeQuest')}
                 </div>
               </div>
             </div>
         )}
 
-        {/* Тиждень кухні */}
         <div className="animate-slide-up" style={{ animationDelay: '0.15s' }}>
           <div className="bg-gradient-to-br from-purple-600/10 to-violet-600/10 border border-purple-500/10 rounded-2xl p-5">
             <div className="flex items-center gap-3">
@@ -163,28 +183,27 @@ export default function Home() {
                 <Target size={20} className="text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-bold text-white">Тиждень {cuisine} кухні</p>
-                <p className="text-xs text-gray-500">Готуй та отримуй бонусні бали</p>
+                <p className="text-sm font-bold text-white">{t('home.cuisineWeek', { cuisine: cuisine })}</p>
+                <p className="text-xs text-gray-500">{t('home.cuisineWeekDesc')}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Кнопки генерації */}
         <div className="grid grid-cols-2 gap-3 animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <Link to="/generate?mode=photo" className="bg-[#1a1a2e] border border-white/5 rounded-2xl p-4 hover:border-orange-500/30 transition-all group">
             <div className="w-12 h-12 bg-orange-500/10 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-all">
               <Camera className="text-orange-400" size={22} />
             </div>
-            <h3 className="font-bold text-white text-sm">Скан фото</h3>
-            <p className="text-[11px] text-gray-500 mt-1 leading-tight">AI визначить інгредієнти</p>
+            <h3 className="font-bold text-white text-sm">{t('home.scanPhoto')}</h3>
+            <p className="text-[11px] text-gray-500 mt-1 leading-tight">{t('home.scanPhotoDesc')}</p>
           </Link>
           <Link to="/generate?mode=random" className="bg-[#1a1a2e] border border-white/5 rounded-2xl p-4 hover:border-amber-500/30 transition-all group">
             <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-all">
               <Shuffle className="text-amber-400" size={22} />
             </div>
-            <h3 className="font-bold text-white text-sm">Генератор</h3>
-            <p className="text-[11px] text-gray-500 mt-1 leading-tight">AI підбере рецепт</p>
+            <h3 className="font-bold text-white text-sm">{t('home.generator')}</h3>
+            <p className="text-[11px] text-gray-500 mt-1 leading-tight">{t('home.generatorDesc')}</p>
           </Link>
         </div>
 
@@ -198,8 +217,8 @@ export default function Home() {
               <Trophy className="text-yellow-400" size={20} />
             </div>
             <div className="flex-1">
-              <p className="font-bold text-white text-sm">Leaderboard</p>
-              <p className="text-xs text-gray-500">Your rating: #{ratingScore}</p>
+              <p className="font-bold text-white text-sm">{t('home.leaderboard')}</p>
+              <p className="text-xs text-gray-500">{t('home.yourRating', { score: ratingScore })}</p>
             </div>
             <span className="text-xs text-yellow-400 font-bold">→</span>
           </div>
