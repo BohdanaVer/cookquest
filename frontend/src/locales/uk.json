@@ -1,0 +1,157 @@
+{
+  "profile": {
+    "title": "Профіль",
+    "savedRecipes": "Збережені рецепти",
+    "noRecipes": "Ще немає рецептів. Час готувати!",
+    "myMascot": "Мій маскот",
+    "mascotName": "Броколі",
+    "mascotDesc": "Веселий друг-овоч. Стартовий маскот!",
+    "changeInShop": "Змінити в магазині →",
+    "appLanguage": "Мова додатку",
+    "ukrainian": "Українська",
+    "english": "English",
+    "preferences": "Кулінарні вподобання",
+    "dietType": "Тип харчування",
+    "allergens": "Алергени",
+    "dislikes": "Не люблю (продукти)",
+    "dislikesPlaceholder": "Напр.: кінза, гриби...",
+    "additionalWishes": "Додаткові побажання",
+    "wishesPlaceholder": "Напр.: без гострого, мало солі...",
+    "savePrefs": "Зберегти вподобання",
+    "saving": "Зберігаю...",
+    "loading": "Завантаження...",
+    "rank": "Ранг",
+    "level": "Рівень",
+    "balance": "Баланс",
+    "rating": "Рейтинг",
+    "diets": {
+      "none": "Без обмежень",
+      "vegetarian": "Вегетаріанець",
+      "vegan": "Веган",
+      "pescatarian": "Пескетаріанець",
+      "keto": "Кето",
+      "paleo": "Палео"
+    },
+    "allergenList": {
+      "gluten": "Глютен",
+      "dairy": "Молочні продукти",
+      "nuts": "Горіхи",
+      "eggs": "Яйця",
+      "soy": "Соя",
+      "seafood": "Морепродукти",
+      "lactose": "Лактоза",
+      "honey": "Мед"
+    },
+    "saveSuccess": "Налаштування збережено успішно!",
+    "saveError": "Помилка при збереженні",
+    "saving": "Зберігаю..."
+  },
+
+  "shop": {
+    "title": "Магазин",
+    "balance": "Баланс:",
+    "activeLabel": "Активний",
+    "generatorTitle": "Генератор маскотів",
+    "generatorSubtitle": "ШІ • Stability AI • 3 емоції",
+    "type": "Тип",
+    "style": "Стиль",
+    "personality": "Характер",
+    "color": "Колір",
+    "generateBtn": "Згенерувати маскота",
+    "types": {
+      "chef": "Шеф", "ingredient": "Інгред.", "dish": "Страва", "appliance": "Прилад", "animal": "Тварина", "trophy": "Трофей"
+    },
+    "styles": {
+      "cartoon": "Мульт", "chibi": "Чіббі", "pixel": "Піксель", "flat": "Flat", "3d": "3D", "fantasy": "Фентезі"
+    },
+    "personalities": {
+      "happy": "😄 Веселий", "brave": "💪 Відважний", "cute": "🥰 Милий", "wise": "🧐 Мудрий", "energetic": "⚡ Живий", "mischievous": "😏 Шибеник"
+    },
+    "rarities": {
+      "common": "Звичайний", "rare": "Рідкісний", "epic": "Епічний", "legendary": "Легендарний"
+    },
+    "states": {
+      "active": "Активний",
+      "owned": "В наявності"
+    },
+    "items": {
+      "broccoli": { "name": "Броколі", "desc": "Веселий друг-овоч. Стартовий маскот!" },
+      "slime": { "name": "Слаймі", "desc": "Милий зелений слайм, що тягнеться до знань" },
+      "cheese": { "name": "Сирко", "desc": "Справжній сирний магнат на твоїй кухні" },
+      "pepper": { "name": "Перчик", "desc": "Гострий та запальний помічник" },
+      "icecream": { "name": "Морозко", "desc": "Холодний, але з теплим серцем" },
+      "stove": { "name": "Пічка", "desc": "Хранитель вогню та смаку" },
+      "cauldron": { "name": "Казанок", "desc": "Майстер магічної кулінарії" },
+      "knightpan": { "name": "Лицар", "desc": "Непереможний воїн кухні!" }
+    }
+  },
+
+  "leaderboard": {
+    "title": "Рейтинг",
+    "yourRank": "Твоє місце:",
+    "noParticipants": "Поки немає учасників"
+  },
+
+  "friends": {
+    "title": "Друзі",
+    "friendsCount": "{{count}} друзів",
+    "findUser": "Знайти користувача",
+    "searchPlaceholder": "Ім'я користувача...",
+    "myFriends": "Мої друзі ({{count}})",
+    "noFriendsTitle": "У тебе поки немає друзів.",
+    "noFriendsSub": "Скористайся пошуком вище, щоб знайти їх!"
+  },
+
+  "generate": {
+    "mascotSelect": "Обери рецепт!",
+    "mascotFound": "Ось що я знайшов!",
+    "mascotStart": "Що приготуємо?",
+    "selectBtn": "Обрати",
+    "findRecipesBtn": "Знайти рецепти",
+    "photoTab": "Фото",
+    "generatorTab": "Генератор",
+    "cameraBtn": "Камера",
+    "galleryBtn": "Галерея",
+    "maxPhotosError": "Максимум 3 фото",
+    "promptPlaceholder": "Опишіть побажання...",
+    "myFridge": "Мій холодильник",
+    "processing": "Обробка...",
+    "detectAndFindBtn": "Визначити продукти та знайти",
+    "difficulty": {
+      "easy": "Легко",
+      "medium": "Середньо",
+      "hard": "Складно"
+    }
+  },
+
+  "home": {
+    "loading": "Завантаження...",
+    "welcome": "Вітаю, {{name}}!",
+    "defaultRank": "Досвідчений кухар",
+    "recipesCooked": "Рецептів",
+    "questsCompleted": "Квестів",
+    "rating": "Рейтинг",
+    "battleChallenge": "{{name}} кидає виклик!",
+    "battleBadge": "БАТЛ",
+    "questOfDay": "Квест дня",
+    "cuisineSuffix": "{{cuisine}} кухня",
+    "completeQuest": "Виконати квест",
+    "cuisineWeek": "Тиждень {{cuisine}} кухні",
+    "cuisineWeekDesc": "Готуй та отримуй бонусні бали",
+    "scanPhoto": "Скан фото",
+    "scanPhotoDesc": "AI визначить інгредієнти",
+    "generator": "Генератор",
+    "generatorDesc": "AI підбере рецепт",
+    "leaderboard": "Leaderboard",
+    "yourRating": "Your rating: #{{score}}"
+  },
+
+  "nav": {
+    "home": "Головна",
+    "recipes": "Рецепти",
+    "quests": "Квести",
+    "ranking": "Рейтинг",
+    "shop": "Магазин",
+    "friends": "Друзі"
+  }
+}
