@@ -11,6 +11,6 @@ public record RecipeItem(
         String cuisine,
         List<String> dietaryTags,
         List<IngredientDTO> ingredients,
-        List<StepDTO> steps
-) {
-}
+        List<StepDTO> steps,
+        String signature
+) {}

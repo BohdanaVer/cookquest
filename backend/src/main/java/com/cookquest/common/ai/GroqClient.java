@@ -1,4 +1,4 @@
-package com.cookquest.recipe.ai.client;
+package com.cookquest.common.ai;
 
 import com.cookquest.common.exception.AppException;
 import com.cookquest.common.exception.ErrorCode;
@@ -139,5 +139,23 @@ public class GroqClient {
                 .replaceAll("^```\\s*", "")
                 .replaceAll("\\s*```$", "")
                 .trim();
+    }
+
+    public String sendVisionRequestRaw(String formattedMessagesArray) {
+        try {
+            // Перетворюємо стрічку з промптом на JsonNode, як того вимагає твій executeWithRetry
+            JsonNode messagesNode = objectMapper.readTree(formattedMessagesArray);
+
+            // Відправляємо запит. Зверни увагу: останній параметр false, бо Vision не підтримує JSON_OBJECT
+            return executeWithRetry(visionModel, messagesNode, 512, 0.2, false);
+
+        } catch (Exception e) {
+            log.error("Помилка парсингу промпту", e);
+            throw new AppException(
+                    ErrorCode.INTERNAL_SERVER_ERROR,
+                    "Внутрішня помилка формування запиту до ШІ",
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
     }
 }

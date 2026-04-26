@@ -24,7 +24,9 @@ public class RecipeController {
 
     @PostMapping(value = "/recognize", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<VisionResponse> recognize(
-            @RequestParam("files") List<MultipartFile> files) {
-        return ResponseEntity.ok(recipeService.recognizeIngredients(files));
+            @RequestParam("files") List<MultipartFile> files,
+            @RequestParam(value = "language", required = false) String requestLanguage) {
+
+        return ResponseEntity.ok(recipeService.recognizeIngredients(files, requestLanguage));
     }
 }
