@@ -11,10 +11,14 @@ import com.cookquest.cooking.dto.StartCookingRequest;
 import com.cookquest.cooking.dto.StepVerificationResponse;
 import com.cookquest.cooking.entity.CookingSession;
 import com.cookquest.cooking.entity.SessionStatus;
+import com.cookquest.cooking.entity.UsedBatch;
+import com.cookquest.cooking.entity.XpMode;
 import com.cookquest.cooking.repository.CookingSessionRepository;
+import com.cookquest.cooking.repository.UsedBatchRepository;
 import com.cookquest.profile.entity.Language;
 import com.cookquest.profile.entity.UserProfile;
 import com.cookquest.common.ai.GroqClient;
+import com.cookquest.recipe.repository.RecipeRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -40,9 +44,9 @@ public class CookingService {
     private final ObjectMapper objectMapper;
     private final VerificationPromptBuilder promptBuilder;
     private final VerificationValidator validator;
-    private final RecipeSignatureService signatureService;
+    private final RecipeRepository recipeRepository;
+    private final UsedBatchRepository usedBatchRepository;
 
-    // Твій ідеальний метод розпаковки Сейфа Спрінга
     private UserProfile getCurrentUserProfile() {
         CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User myUser = userDetails.getUser();
@@ -56,12 +60,42 @@ public class CookingService {
 
     @Transactional
     public CookingSessionDto startCooking(StartCookingRequest request) {
-        signatureService.verifySignatureOrThrow(request.recipeJson(), request.signature());
+        var recipe = recipeRepository.findById(request.recipeId())
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Рецепт не знайдено", HttpStatus.NOT_FOUND));
 
         User user = getCurrentUser();
+
+        boolean isAuthor = recipe.getAuthor().getId().equals(user.getId());
+        boolean batchAlreadyUsed = usedBatchRepository.existsByUserIdAndBatchId(user.getId(), recipe.getBatchId());
+
+        XpMode xpMode;
+
+        if (isAuthor && !batchAlreadyUsed) {
+            xpMode = XpMode.FULL;
+
+            UsedBatch usedBatch = UsedBatch.builder()
+                    .user(user)
+                    .batchId(recipe.getBatchId())
+                    .usedAt(LocalDateTime.now())
+                    .build();
+            usedBatchRepository.save(usedBatch);
+        } else {
+            LocalDateTime startOfDay = java.time.LocalDate.now().atStartOfDay();
+            long cooksOfThisRecipeToday = sessionRepository.countReducedXpCooksToday(user.getId(), startOfDay);
+
+            if (cooksOfThisRecipeToday >= 1) {
+                xpMode = XpMode.NONE;
+            } else {
+                xpMode = XpMode.REDUCED;
+            }
+        }
+
         CookingSession session = CookingSession.builder()
                 .user(user)
-                .recipeJson(request.recipeJson())
+                .recipeId(recipe.getId())
+                .batchId(recipe.getBatchId())
+                .recipeJson(recipe.getRecipeJson())
+                .xpMode(xpMode)
                 .status(SessionStatus.IN_PROGRESS)
                 .verifiedSteps("")
                 .earnedPoints(0)
@@ -88,9 +122,8 @@ public class CookingService {
     public StepVerificationResponse verifyStep(Long sessionId, MultipartFile file, int stepNumber, String requestLanguage) {
         CookingSession session = getActiveSessionStrict(sessionId);
         UserProfile profile = getCurrentUserProfile();
-        User currentUser = session.getUser(); // Дістаємо юзера для перевірки ролі
+        User currentUser = session.getUser();
 
-        // 1. Визначаємо мову для відповіді ШІ
         String targetLanguage = resolveLanguage(requestLanguage, profile);
 
         try {
@@ -101,7 +134,6 @@ public class CookingService {
             int basePoints = recipeNode.path("points").asInt(50);
             int totalSteps = stepsArray.size();
 
-            // Фронтенд присилає stepNumber від 1. Індекс від 0.
             int stepIndex = stepNumber - 1;
             if (stepIndex < 0 || stepIndex >= totalSteps) {
                 throw new AppException(ErrorCode.INVALID_REQUEST, "Неправильний номер кроку", HttpStatus.BAD_REQUEST);
@@ -112,73 +144,60 @@ public class CookingService {
             String checkpointLabel = currentStep.path("checkpointLabel").asText(null);
 
             VerificationValidator.StepVerificationResult result;
-
-            // ==========================================
-            // МАГІЯ ТЕСТУВАННЯ: РОЛЬ ADMIN
-            // ==========================================
-            // Перевіряємо, чи є користувач адміністратором
             boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
 
             if (isAdmin) {
                 log.info("Адміністратор перевіряє крок {}. Пропускаємо запит до ШІ.", stepNumber);
-                // Імітуємо ідеальну відповідь від ШІ
                 result = new VerificationValidator.StepVerificationResult(
                         100, true, "Ідеально виконано! (Auto-Approve by Admin)", true, true
                 );
             } else {
-                // ==========================================
-                // РЕАЛЬНА ЛОГІКА ДЛЯ КОРИСТУВАЧІВ
-                // ==========================================
-                // Перевіряємо, чи передав звичайний користувач файл
-                if (file == null || file.isEmpty()) {
-                    throw new AppException(ErrorCode.INVALID_REQUEST, "Фотографія обов'язкова для перевірки!", HttpStatus.BAD_REQUEST);
-                }
+                boolean isFinalStep = (stepNumber == totalSteps);
 
-                // 2. Кодуємо фото
-                String base64 = Base64.getEncoder().encodeToString(file.getBytes());
-                String imageUrl = "data:" + file.getContentType() + ";base64," + base64;
 
-                // 3. Будуємо промпт (передаємо мову!)
-                String messagesPayload = promptBuilder.buildMessages(imageUrl, recipeName, stepNumber, stepDesc, checkpointLabel, targetLanguage);
-
-                // 4. Запит до ШІ
-                String rawResponse = groqClient.sendVisionRequestRaw(messagesPayload);
-                JsonNode aiResponse = objectMapper.readTree(rawResponse);
-
-                // 5. Валідація
-                result = validator.validate(aiResponse);
-                if (!result.valid()) {
-                    throw new AppException(ErrorCode.AI_VISION_FAILED, "Не вдалося оцінити фото", HttpStatus.INTERNAL_SERVER_ERROR);
+                if (session.getXpMode() == XpMode.NONE) {
+                    result = new VerificationValidator.StepVerificationResult(100, true, "Крок пройдено! (Вільне готування)", false, true);
+                } else if (session.getXpMode() == XpMode.REDUCED && !isFinalStep) {
+                    result = new VerificationValidator.StepVerificationResult(100, true, "Крок пройдено! (ШІ оцінить фінальну страву)", false, true);
+                } else {
+                    if (file == null || file.isEmpty()) throw new AppException(ErrorCode.INVALID_REQUEST, "Фото обов'язкове!", HttpStatus.BAD_REQUEST);
+                    String base64 = Base64.getEncoder().encodeToString(file.getBytes());
+                    String imageUrl = "data:" + file.getContentType() + ";base64," + base64;
+                    String messagesPayload = promptBuilder.buildMessages(imageUrl, recipeName, stepNumber, stepDesc, checkpointLabel, targetLanguage);
+                    String rawResponse = groqClient.sendVisionRequestRaw(messagesPayload);
+                    result = validator.validate(objectMapper.readTree(rawResponse));
                 }
             }
 
-            // 6. ЛОГІКА НАРАХУВАННЯ БАЛІВ
             if (result.passed()) {
                 boolean isFinalStep = (stepNumber == totalSteps);
                 String verifiedStr = session.getVerifiedSteps();
 
-                // ШЛЯХ А: Це ПРОМІЖНИЙ крок
                 if (!isFinalStep) {
-                    // Якщо ми ще НЕ давали бали за цей крок
                     if (!verifiedStr.contains(String.valueOf(stepNumber))) {
                         session.setVerifiedSteps(verifiedStr.isEmpty() ? String.valueOf(stepNumber) : verifiedStr + "," + stepNumber);
 
-                        // Даємо +15 бонусних балів (+20, якщо ШІ в захваті)
-                        int bonus = result.bonusEligible() ? 20 : 15;
-                        session.setEarnedPoints(session.getEarnedPoints() + bonus);
+                        if (session.getXpMode() == XpMode.FULL) {
+                            int bonus = result.bonusEligible() ? 20 : 15;
+                            session.setEarnedPoints(session.getEarnedPoints() + bonus);
+                        }
                     }
-                }
-                // ШЛЯХ Б: Це ФІНАЛЬНИЙ крок (Готова страва)
-                else {
+                } else {
                     session.setStatus(SessionStatus.COMPLETED);
                     session.setCompletedAt(LocalDateTime.now());
 
-                    // Нараховуємо: Базові бали + Всі накопичені бонуси
-                    int totalXpToAward = basePoints + session.getEarnedPoints();
+                    int totalXpToAward = 0;
+                    if (session.getXpMode() == XpMode.FULL) {
+                        totalXpToAward = basePoints + session.getEarnedPoints();
+                    } else if (session.getXpMode() == XpMode.REDUCED) {
+                        totalXpToAward = Math.max(1, basePoints / 10);
+                    }
 
-                    profile.setXp(profile.getXp() + totalXpToAward);
-                    profile.setRatingScore(profile.getRatingScore() + totalXpToAward);
-                    profile.setBalance(profile.getBalance() + totalXpToAward);
+                    if (totalXpToAward > 0) {
+                        profile.setXp(profile.getXp() + totalXpToAward);
+                        profile.setRatingScore(profile.getRatingScore() + totalXpToAward);
+                        profile.setBalance(profile.getBalance() + totalXpToAward);
+                    }
                 }
             }
 
@@ -191,7 +210,6 @@ public class CookingService {
                     .build();
 
         } catch (AppException e) {
-            // Прокидаємо наші власні помилки без змін
             throw e;
         } catch (Exception e) {
             log.error("Step verification error", e);
@@ -212,16 +230,22 @@ public class CookingService {
     }
 
     private CookingSessionDto mapToDto(CookingSession session) {
-        return CookingSessionDto.builder()
-                .sessionId(session.getId())
-                .recipeJson(session.getRecipeJson())
-                .status(session.getStatus().name())
-                .earnedPoints(session.getEarnedPoints())
-                .startedAt(session.getStartedAt())
-                .build();
+        try {
+            return CookingSessionDto.builder()
+                    .sessionId(session.getId())
+                    .recipe(objectMapper.readValue(session.getRecipeJson(), Object.class))
+                    .status(session.getStatus().name())
+                    .earnedPoints(session.getEarnedPoints())
+                    .startedAt(session.getStartedAt())
+                    .xpMode(session.getXpMode())
+                    .batchId(session.getBatchId())
+                    .build();
+        } catch (Exception e) {
+            log.error("Помилка десеріалізації рецепта для DTO", e);
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Помилка обробки даних рецепта", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
-    // Визначаємо мову для ШІ
     private String resolveLanguage(String requestLang, UserProfile profile) {
         if (requestLang != null && !requestLang.isBlank()) {
             String lang = requestLang.trim().toLowerCase();

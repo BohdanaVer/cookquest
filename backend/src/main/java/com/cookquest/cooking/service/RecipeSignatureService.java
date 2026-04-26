@@ -14,13 +14,11 @@ import java.util.Base64;
 @Service
 public class RecipeSignatureService {
 
-    // Секретний ключ (його ніхто не знає, крім сервера)
     @Value("${app.security.recipe-secret:cookquest-super-secret-key-2026}")
     private String secretKey;
 
     private static final String ALGORITHM = "HmacSHA256";
 
-    // Генерує підпис
     public String generateSignature(String data) {
         try {
             Mac mac = Mac.getInstance(ALGORITHM);
@@ -33,7 +31,6 @@ public class RecipeSignatureService {
         }
     }
 
-    // Перевіряє підпис і кидає помилку, якщо щось не так
     public void verifySignatureOrThrow(String data, String providedSignature) {
         if (providedSignature == null || providedSignature.isBlank()) {
             throw new AppException(ErrorCode.SECURITY_VIOLATION, "Відсутній підпис рецепта", HttpStatus.FORBIDDEN);

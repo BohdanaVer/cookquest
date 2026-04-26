@@ -12,6 +12,7 @@ import com.cookquest.recipe.ai.prompt.VisionPromptBuilder;
 import com.cookquest.recipe.ai.validator.InputSanitizer;
 import com.cookquest.recipe.ai.validator.OutputValidator;
 import com.cookquest.recipe.dto.*;
+import com.cookquest.recipe.repository.RecipeRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.cookquest.common.exception.ErrorCode;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Slf4j
@@ -36,7 +38,7 @@ public class RecipeService {
     private final VisionPromptBuilder visionPromptBuilder;
     private final GroqClient groqClient;
     private final ObjectMapper objectMapper;
-    private final RecipeSignatureService signatureService;
+    private final RecipeRepository recipeRepository;
 
     private final Random random = new Random();
     private static final String[] DIFFICULTY_LEVELS = {"easy", "medium", "hard"};
@@ -93,16 +95,64 @@ public class RecipeService {
                         HttpStatus.SERVICE_UNAVAILABLE);
             }
 
+
+            String batchId = java.util.UUID.randomUUID().toString();
             List<RecipeItem> safeRecipes = new ArrayList<>();
+
             for (JsonNode node : validatedNodes) {
-                String recipeContent = objectMapper.writeValueAsString(node);
-                String signature = signatureService.generateSignature(recipeContent);
+                try {
+                    String recipeJsonForDb = objectMapper.writeValueAsString(node);
 
-                Map<String, Object> recipeMap = objectMapper.convertValue(node, new TypeReference<>() {});
-                recipeMap.put("signature", signature);
+                    com.cookquest.recipe.entity.Recipe recipeEntity = com.cookquest.recipe.entity.Recipe.builder()
+                            .author(myUser)
+                            .recipeJson(recipeJsonForDb)
+                            .batchId(batchId)
+                            .isSaved(false)
+                            .createdAt(LocalDateTime.now())
+                            .build();
 
-                RecipeItem item = objectMapper.convertValue(recipeMap, RecipeItem.class);
-                safeRecipes.add(item);
+                    recipeEntity = recipeRepository.save(recipeEntity);
+
+                    List<IngredientDTO> parsedIngredients = new ArrayList<>();
+                    if (node.has("ingredients") && node.get("ingredients").isArray()) {
+                        for (JsonNode ingNode : node.get("ingredients")) {
+                            parsedIngredients.add(objectMapper.treeToValue(ingNode, IngredientDTO.class));
+                        }
+                    }
+
+                    List<String> dietaryTags = new ArrayList<>();
+                    if (node.has("dietaryTags") && node.get("dietaryTags").isArray()) {
+                        for (JsonNode tagNode : node.get("dietaryTags")) {
+                            dietaryTags.add(tagNode.asText());
+                        }
+                    }
+
+                    RecipeItem finalItem = new RecipeItem(
+                            node.path("name").asText(),
+                            node.path("description").asText(),
+                            node.path("difficulty").asText(),
+                            node.path("points").asInt(),
+                            node.path("cookingTimeMinutes").asInt(),
+                            node.path("cuisine").asText(),
+                            dietaryTags,
+                            parsedIngredients,
+                            node.path("steps").size(),
+                            recipeEntity.getId()
+                    );
+
+                    safeRecipes.add(finalItem);
+
+                } catch (Exception e) {
+                    log.error("Помилка обробки окремого рецепта: {}", node.path("name").asText(), e);
+                }
+            }
+
+            if (safeRecipes.isEmpty()) {
+                throw new AppException(
+                        ErrorCode.AI_GENERATION_FAILED,
+                        "На жаль, ШІ згенерував рецепти у некоректному форматі. Спробуйте ще раз.",
+                        HttpStatus.SERVICE_UNAVAILABLE
+                );
             }
 
             return new RecipeListResponse(safeRecipes);

@@ -1,13 +1,17 @@
 package com.cookquest.cooking.dto;
 
+import com.cookquest.cooking.entity.XpMode;
 import lombok.Builder;
 import java.time.LocalDateTime;
 
 @Builder
 public record CookingSessionDto(
         Long sessionId,
-        String recipeJson,
+        Object  recipe,
         String status,
         int earnedPoints,
-        LocalDateTime startedAt
+        LocalDateTime startedAt,
+        boolean isFullXp,
+        String batchId,
+        XpMode xpMode
 ) {}

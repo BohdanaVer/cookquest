@@ -1,5 +1,4 @@
 package com.cookquest.recipe.dto;
-
 import java.util.List;
 
 public record RecipeItem(
@@ -11,6 +10,6 @@ public record RecipeItem(
         String cuisine,
         List<String> dietaryTags,
         List<IngredientDTO> ingredients,
-        List<StepDTO> steps,
-        String signature
+        int stepCount,
+        String id
 ) {}

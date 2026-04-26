@@ -39,7 +39,7 @@ public class CookingController {
             @PathVariable Long sessionId,
             @RequestParam("stepNumber") int stepNumber,
             @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "language", required = false) String requestLanguage) { // Додали 4-й параметр тут
+            @RequestParam(value = "language", required = false) String requestLanguage) {
 
         return ResponseEntity.ok(cookingService.verifyStep(sessionId, file, stepNumber, requestLanguage));
     }

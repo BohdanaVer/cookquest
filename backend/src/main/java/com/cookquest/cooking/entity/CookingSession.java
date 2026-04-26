@@ -26,14 +26,23 @@ public class CookingSession {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private SessionStatus status; // IN_PROGRESS, COMPLETED, CANCELLED
+    private SessionStatus status;
 
     @Column(nullable = false)
     @Builder.Default
     private String verifiedSteps = "";
 
     @Column(nullable = false)
-    private Integer earnedPoints = 0;     // Накопичені бали за рецепт
+    private Integer earnedPoints = 0;
+
+    @Column(nullable = false)
+    private String recipeId;
+
+    @Column(nullable = false)
+    private String batchId;
+
+    @Enumerated(EnumType.STRING)
+    private XpMode xpMode;
 
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
