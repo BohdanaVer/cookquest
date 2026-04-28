@@ -12,27 +12,27 @@ import java.util.List;
 @Component
 public class RecipePromptBuilder {
 
-    public String buildUnifiedRecipeMessages(List<String> available, String userRequest, String challengeCuisine, UserProfile profile, String targetLanguage, String fourthDifficulty) {
-        String systemPrompt = buildRecipeSystemPrompt(challengeCuisine, targetLanguage, fourthDifficulty);
-        String dataBlock = buildDataBlock(available, userRequest, profile, targetLanguage);
+    public String buildUnifiedRecipeMessages(List<String> available, String userRequest, String challengeCuisine, UserProfile profile, String targetLanguage, int count) {
+        String systemPrompt = buildRecipeSystemPrompt(challengeCuisine, targetLanguage, count);
+        String dataBlock = buildDataBlock(available, userRequest, profile, targetLanguage, count);
         return formatMessages(systemPrompt, dataBlock);
     }
 
-    private String buildRecipeSystemPrompt(String challengeCuisine, String targetLanguage, String fourthDifficulty) {
+    private String buildRecipeSystemPrompt(String challengeCuisine, String targetLanguage, int count) {
         String cuisineConstraint = (challengeCuisine != null && !challengeCuisine.isEmpty())
                 ? "IMPORTANT: All recipes MUST belong to the cuisine: " + challengeCuisine + ". This is a mandatory challenge requirement.\n\n"
                 : "";
 
+        String difficultyRule = (count == 4)
+                ? "Recipe 1: \"easy\"\nRecipe 2: \"medium\"\nRecipe 3: \"hard\"\nRecipe 4: \"medium\" (or \"easy\"/\"hard\" at random)"
+                : "Generate EXACTLY " + count + " recipes with a balanced variety of difficulties (use \"easy\", \"medium\", or \"hard\").";
+
         return """
             You are a professional culinary expert and recipe writer for a cooking gamification app.
-            Your ONLY task is to generate EXACTLY 4 DETAILED, COMPLETE, END-TO-END recipes based on the data in <user_data>.
+            Your ONLY task is to generate EXACTLY %d DETAILED, COMPLETE, END-TO-END recipes based on the data in <user_data>.
             
-            %sDIFFICULTY RULE (STRICT):
-            You MUST generate exactly 4 recipes with the following exact difficulty distribution:
-            Recipe 1: "easy"
-            Recipe 2: "medium"
-            Recipe 3: "hard"
-            Recipe 4: "%s"
+            DIFFICULTY RULE (STRICT):
+            %s
             
             MANDATORY LANGUAGE RULE:
             The ENTIRE response must be written in %s language ONLY.
@@ -80,27 +80,28 @@ public class RecipePromptBuilder {
             RECIPE RULES:
             - Recipes must be genuinely different — different techniques, cuisines, or ingredient focus.
             - ALWAYS respect the user's dietary profile at the top of the message — adapt or replace ingredients as needed.
+            - DIETARY TAGS: Analyze the final ingredients. ONLY include tags (e.g., "vegan", "vegetarian", "gluten-free", "dairy-free", "keto") IF the recipe strictly meets those criteria naturally. If no special diet applies, leave the array EMPTY []. Do NOT just copy examples.
             
-            RESPONSE FORMAT return ONLY this JSON object containing an array, nothing else before or after:
-            {
-              "recipes": [
-                {
-                  "name": "Full Recipe Name",
-                  "description": "Appetizing description (2-3 sentences)",
-                  "difficulty": "easy",
-                  "points": 150,
-                  "cookingTimeMinutes": 45,
-                  "cuisine": "Italian",
-                  "dietaryTags": ["vegan", "gluten-free"],
-                  "ingredients": [ { "name": "Ingredient name", "amount": "200", "unit": "g" } ],
-                  "steps": [ { "text": "Detailed step description", "isCheckpoint": false, "checkpointLabel": null } ]
-                }
-              ]
-            }
-            """.formatted(cuisineConstraint, fourthDifficulty, targetLanguage);
+            RESPONSE FORMAT return ONLY this JSON object containing an array of EXACTLY %d recipes, nothing else before or after:
+             '{
+               "recipes": [
+                 {
+                   "name": "Full Recipe Name",
+                   "description": "Appetizing description (2-3 sentences)",
+                   "difficulty": "easy",
+                   "points": 150,
+                   "cookingTimeMinutes": 45,
+                   "cuisine": "Italian",
+                   "dietaryTags": [],\s
+                   "ingredients": [ { "name": "Ingredient name", "amount": "200", "unit": "g" } ],
+                   "steps": [ { "text": "Detailed step description", "isCheckpoint": false, "checkpointLabel": null } ]
+                 }
+               ]
+             }'
+            """.formatted(count, difficultyRule, targetLanguage, count);
     }
 
-    private String buildDataBlock(List<String> available, String userRequest, UserProfile profile, String targetLanguage) {
+    private String buildDataBlock(List<String> available, String userRequest, UserProfile profile, String targetLanguage, int count) {
         String profilePrefix = buildProfilePrefix(profile);
         StringBuilder data = new StringBuilder();
 
@@ -117,7 +118,8 @@ public class RecipePromptBuilder {
         }
         data.append("</user_data>\n\n");
 
-        data.append("Generate exactly 4 full, detailed recipes ");
+        data.append("Generate exactly ").append(count).append(" full, detailed recipes ");
+
         if (hasIngredients && hasRequest) {
             data.append("based on the USER_REQUEST, utilizing the AVAILABLE_INGREDIENTS. ");
         } else if (hasIngredients) {

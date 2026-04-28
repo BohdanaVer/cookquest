@@ -13,7 +13,6 @@ public class VerificationPromptBuilder {
             safeCheckpoint = "Н/Д";
         }
 
-        // Зверни увагу на %1$s - туди підставиться targetLanguage
         String systemPrompt = """
             You are a cooking quality verification assistant.
             Your ONLY task is to evaluate whether a photo shows a correctly completed cooking step.
@@ -46,7 +45,6 @@ public class VerificationPromptBuilder {
             }
             """.formatted(targetLanguage);
 
-        // Зверни увагу на останній %s - туди підставиться targetLanguage
         String contextText = """
             РЕЦЕПТ: %s
             КРОК №: %d

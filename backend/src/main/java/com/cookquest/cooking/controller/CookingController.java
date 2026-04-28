@@ -38,7 +38,7 @@ public class CookingController {
     public ResponseEntity<StepVerificationResponse> verifyStep(
             @PathVariable Long sessionId,
             @RequestParam("stepNumber") int stepNumber,
-            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "language", required = false) String requestLanguage) {
 
         return ResponseEntity.ok(cookingService.verifyStep(sessionId, file, stepNumber, requestLanguage));

@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "recipes")
-@Data @Builder @NoArgsConstructor @AllArgsConstructor
+@Data @NoArgsConstructor @AllArgsConstructor @Builder
 public class Recipe {
 
     @Id
@@ -15,16 +15,19 @@ public class Recipe {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id", nullable = false)
+    @JoinColumn(name = "author_id", nullable = true)
     private User author;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
-    private String recipeJson;
-
-    @Column(nullable = false)
+    @Column(name = "batch_id", nullable = true, length = 36)
     private String batchId;
 
-    private boolean isSaved;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private RecipeOrigin origin;
 
+    @Column(name = "recipe_json", columnDefinition = "TEXT", nullable = false)
+    private String recipeJson;
+
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 }

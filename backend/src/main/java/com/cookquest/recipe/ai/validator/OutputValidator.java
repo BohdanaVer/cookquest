@@ -19,12 +19,10 @@ public class OutputValidator {
     private static final int RECIPE_POINTS_MAX = 500;
     private static final int RECIPE_NAME_MAX = 100;
     private static final int RECIPE_DESCRIPTION_MAX = 500;
-    private static final int STEP_TEXT_MAX = 800;
     private static final int INGREDIENT_NAME_MAX = 120;
     private static final int INGREDIENTS_MAX = 40;
     private static final int STEPS_MAX = 40;
     private static final int RECIPES_COUNT_MIN = 1;
-    private static final int RECIPES_COUNT_MAX = 4;
 
     private final List<String> DIFFICULTY_LEVELS = List.of("easy", "medium", "hard");
 
@@ -64,7 +62,7 @@ public class OutputValidator {
         return ingredients;
     }
 
-    public List<JsonNode> validateRecipeList(JsonNode rootNode) {
+    public List<JsonNode> validateRecipeList(JsonNode rootNode, int expectedCount) {
         if (rootNode == null) {
             log.error("AI output is null");
             return List.of();
@@ -81,7 +79,7 @@ public class OutputValidator {
         }
 
         List<JsonNode> validatedRecipes = new ArrayList<>();
-        for (int i = 0; i < Math.min(arrayNode.size(), RECIPES_COUNT_MAX); i++) {
+        for (int i = 0; i < Math.min(arrayNode.size(), expectedCount); i++) {
             JsonNode recipe = arrayNode.get(i);
             if (isValidRecipe(recipe)) {
                 validatedRecipes.add(recipe);

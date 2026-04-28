@@ -3,9 +3,11 @@ package com.cookquest.cooking.repository;
 import com.cookquest.auth.entity.User;
 import com.cookquest.cooking.entity.CookingSession;
 import com.cookquest.cooking.entity.SessionStatus;
+import com.cookquest.cooking.entity.XpMode;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface CookingSessionRepository extends JpaRepository<CookingSession, Long> {
@@ -15,6 +17,4 @@ public interface CookingSessionRepository extends JpaRepository<CookingSession, 
 
     boolean existsByUserIdAndBatchIdAndStatus(Long userId, String batchId, SessionStatus status);
 
-    @Query("SELECT COUNT(c) FROM CookingSession c WHERE c.user.id = :userId AND c.xpMode = 'REDUCED' AND c.startedAt >= :startOfDay")
-    long countReducedXpCooksToday(@org.springframework.data.repository.query.Param("userId") Long userId, @org.springframework.data.repository.query.Param("startOfDay") java.time.LocalDateTime startOfDay);
-}
+    long countByUserIdAndXpModeAndStartedAtAfter(Long userId, XpMode xpMode, LocalDateTime startOfDay);}

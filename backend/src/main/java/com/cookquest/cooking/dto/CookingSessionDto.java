@@ -11,7 +11,6 @@ public record CookingSessionDto(
         String status,
         int earnedPoints,
         LocalDateTime startedAt,
-        boolean isFullXp,
         String batchId,
         XpMode xpMode
 ) {}

@@ -9,15 +9,15 @@ import com.cookquest.cooking.ai.validator.VerificationValidator;
 import com.cookquest.cooking.dto.CookingSessionDto;
 import com.cookquest.cooking.dto.StartCookingRequest;
 import com.cookquest.cooking.dto.StepVerificationResponse;
-import com.cookquest.cooking.entity.CookingSession;
-import com.cookquest.cooking.entity.SessionStatus;
-import com.cookquest.cooking.entity.UsedBatch;
-import com.cookquest.cooking.entity.XpMode;
+import com.cookquest.cooking.entity.*;
+import com.cookquest.cooking.repository.CompletedQuestRepository;
 import com.cookquest.cooking.repository.CookingSessionRepository;
+import com.cookquest.cooking.repository.QuestRepository;
 import com.cookquest.cooking.repository.UsedBatchRepository;
 import com.cookquest.profile.entity.Language;
 import com.cookquest.profile.entity.UserProfile;
 import com.cookquest.common.ai.GroqClient;
+import com.cookquest.recipe.entity.Recipe;
 import com.cookquest.recipe.repository.RecipeRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
@@ -46,6 +47,8 @@ public class CookingService {
     private final VerificationValidator validator;
     private final RecipeRepository recipeRepository;
     private final UsedBatchRepository usedBatchRepository;
+    private final QuestRepository questRepository;
+    private final CompletedQuestRepository completedQuestRepository;
 
     private UserProfile getCurrentUserProfile() {
         CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -64,29 +67,27 @@ public class CookingService {
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Рецепт не знайдено", HttpStatus.NOT_FOUND));
 
         User user = getCurrentUser();
+        Quest todayQuest = questRepository.findByRecipeIdAndActiveDate(recipe.getId(), LocalDate.now());
 
-        boolean isAuthor = recipe.getAuthor().getId().equals(user.getId());
-        boolean batchAlreadyUsed = usedBatchRepository.existsByUserIdAndBatchId(user.getId(), recipe.getBatchId());
+        XpMode xpMode = determineXpMode(user, recipe, todayQuest);
 
-        XpMode xpMode;
-
-        if (isAuthor && !batchAlreadyUsed) {
-            xpMode = XpMode.FULL;
-
-            UsedBatch usedBatch = UsedBatch.builder()
-                    .user(user)
-                    .batchId(recipe.getBatchId())
-                    .usedAt(LocalDateTime.now())
-                    .build();
-            usedBatchRepository.save(usedBatch);
-        } else {
-            LocalDateTime startOfDay = java.time.LocalDate.now().atStartOfDay();
-            long cooksOfThisRecipeToday = sessionRepository.countReducedXpCooksToday(user.getId(), startOfDay);
-
-            if (cooksOfThisRecipeToday >= 1) {
-                xpMode = XpMode.NONE;
-            } else {
-                xpMode = XpMode.REDUCED;
+        if (xpMode == XpMode.FULL) {
+            if (todayQuest != null) {
+                completedQuestRepository.save(
+                        CompletedQuest.builder()
+                                .user(user)
+                                .quest(todayQuest)
+                                .startedAt(LocalDateTime.now())
+                                .build()
+                );
+            } else if (recipe.getBatchId() != null) {
+                usedBatchRepository.save(
+                        UsedBatch.builder()
+                                .user(user)
+                                .batchId(recipe.getBatchId())
+                                .usedAt(LocalDateTime.now())
+                                .build()
+                );
             }
         }
 
@@ -105,6 +106,31 @@ public class CookingService {
         return mapToDto(sessionRepository.save(session));
     }
 
+    private XpMode determineXpMode(User user, Recipe recipe, Quest todayQuest) {
+        if (todayQuest != null) {
+            boolean questAlreadyDone = completedQuestRepository.existsByUserIdAndQuestId(user.getId(), todayQuest.getId());
+            return questAlreadyDone ? XpMode.NONE : XpMode.FULL;
+        }
+
+        boolean isAuthor = recipe.getAuthor() != null && recipe.getAuthor().getId().equals(user.getId());
+        if (isAuthor) {
+            if (recipe.getBatchId() == null) {
+                return XpMode.FULL;
+            }
+            boolean batchAlreadyUsed = usedBatchRepository.existsByUserIdAndBatchId(user.getId(), recipe.getBatchId());
+            if (!batchAlreadyUsed) {
+                return XpMode.FULL;
+            }
+        }
+
+        LocalDateTime startOfDay = java.time.LocalDate.now().atStartOfDay();
+        long reducedCooksToday = sessionRepository.countByUserIdAndXpModeAndStartedAtAfter(
+                user.getId(), XpMode.REDUCED, startOfDay
+        );
+
+        return (reducedCooksToday >= 1) ? XpMode.NONE : XpMode.REDUCED;
+    }
+
     @Transactional
     public void cancelCooking(Long sessionId) {
         CookingSession session = getActiveSessionStrict(sessionId);
@@ -121,6 +147,14 @@ public class CookingService {
     @Transactional
     public StepVerificationResponse verifyStep(Long sessionId, MultipartFile file, int stepNumber, String requestLanguage) {
         CookingSession session = getActiveSessionStrict(sessionId);
+
+        if (session.getXpMode() == XpMode.NONE) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Цей рецепт відкрито у режимі перегляду. Перевірка кроків для нього недоступна.",
+                    HttpStatus.BAD_REQUEST);
+        }
+
         UserProfile profile = getCurrentUserProfile();
         User currentUser = session.getUser();
 
@@ -139,6 +173,17 @@ public class CookingService {
                 throw new AppException(ErrorCode.INVALID_REQUEST, "Неправильний номер кроку", HttpStatus.BAD_REQUEST);
             }
 
+            boolean isFinalStep = (stepNumber == totalSteps);
+
+            if (file != null && !file.isEmpty()) {
+                if (session.getXpMode() == XpMode.REDUCED && !isFinalStep) {
+                    throw new AppException(
+                            ErrorCode.INVALID_REQUEST,
+                            "У цьому режимі фото приймається ЛИШЕ на фінальному кроці.",
+                            HttpStatus.BAD_REQUEST);
+                }
+            }
+
             JsonNode currentStep = stepsArray.get(stepIndex);
             String stepDesc = currentStep.path("text").asText();
             String checkpointLabel = currentStep.path("checkpointLabel").asText(null);
@@ -152,7 +197,6 @@ public class CookingService {
                         100, true, "Ідеально виконано! (Auto-Approve by Admin)", true, true
                 );
             } else {
-                boolean isFinalStep = (stepNumber == totalSteps);
 
 
                 if (session.getXpMode() == XpMode.NONE) {
@@ -170,7 +214,6 @@ public class CookingService {
             }
 
             if (result.passed()) {
-                boolean isFinalStep = (stepNumber == totalSteps);
                 String verifiedStr = session.getVerifiedSteps();
 
                 if (!isFinalStep) {
@@ -187,8 +230,32 @@ public class CookingService {
                     session.setCompletedAt(LocalDateTime.now());
 
                     int totalXpToAward = 0;
+
                     if (session.getXpMode() == XpMode.FULL) {
-                        totalXpToAward = basePoints + session.getEarnedPoints();
+                        double currentMultiplier = 1.0;
+
+                        Quest activeQuestAtCompletion = questRepository.findByRecipeIdAndActiveDate(session.getRecipeId(), LocalDate.now());
+
+                        if (activeQuestAtCompletion != null) {
+                            boolean alreadyCompleted = completedQuestRepository.existsByUserIdAndQuestId(currentUser.getId(), activeQuestAtCompletion.getId());
+
+                            if (!alreadyCompleted) {
+                                currentMultiplier = activeQuestAtCompletion.getXpMultiplier();
+
+                                completedQuestRepository.save(
+                                        CompletedQuest.builder()
+                                                .user(currentUser)
+                                                .quest(activeQuestAtCompletion)
+                                                .startedAt(session.getStartedAt())
+                                                .completedAt(LocalDateTime.now())
+                                                .build()
+                                );
+                            }
+                        }
+
+                        int questBasePoints = (int) (basePoints * currentMultiplier);
+                        totalXpToAward = questBasePoints + session.getEarnedPoints();
+
                     } else if (session.getXpMode() == XpMode.REDUCED) {
                         totalXpToAward = Math.max(1, basePoints / 10);
                     }
@@ -220,12 +287,19 @@ public class CookingService {
     private CookingSession getActiveSessionStrict(Long sessionId) {
         CookingSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Сесію не знайдено", HttpStatus.NOT_FOUND));
-        if (!session.getUser().getId().equals(getCurrentUser().getId())) {
-            throw new AppException(ErrorCode.SECURITY_VIOLATION, "Це не ваша сесія", HttpStatus.FORBIDDEN);
+
+        User currentUser = getCurrentUser();
+        boolean isOwner = session.getUser().getId().equals(currentUser.getId());
+        boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
+
+        if (!isOwner && !isAdmin) {
+            throw new AppException(ErrorCode.SECURITY_VIOLATION, "Відмовлено в доступі. Це не ваша сесія.", HttpStatus.FORBIDDEN);
         }
+
         if (session.getStatus() != SessionStatus.IN_PROGRESS) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Сесія не активна", HttpStatus.BAD_REQUEST);
         }
+
         return session;
     }
 
@@ -242,7 +316,10 @@ public class CookingService {
                     .build();
         } catch (Exception e) {
             log.error("Помилка десеріалізації рецепта для DTO", e);
-            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Помилка обробки даних рецепта", HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new AppException(
+                    ErrorCode.INTERNAL_SERVER_ERROR,
+                    "Помилка обробки даних рецепта",
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

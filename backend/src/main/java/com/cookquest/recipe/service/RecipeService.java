@@ -3,7 +3,6 @@ package com.cookquest.recipe.service;
 import com.cookquest.auth.entity.CustomUserDetails;
 import com.cookquest.auth.entity.User;
 import com.cookquest.common.exception.AppException;
-import com.cookquest.cooking.service.RecipeSignatureService;
 import com.cookquest.profile.entity.Language;
 import com.cookquest.profile.entity.UserProfile;
 import com.cookquest.common.ai.GroqClient;
@@ -12,8 +11,8 @@ import com.cookquest.recipe.ai.prompt.VisionPromptBuilder;
 import com.cookquest.recipe.ai.validator.InputSanitizer;
 import com.cookquest.recipe.ai.validator.OutputValidator;
 import com.cookquest.recipe.dto.*;
+import com.cookquest.recipe.entity.RecipeOrigin;
 import com.cookquest.recipe.repository.RecipeRepository;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -40,63 +39,90 @@ public class RecipeService {
     private final ObjectMapper objectMapper;
     private final RecipeRepository recipeRepository;
 
-    private final Random random = new Random();
-    private static final String[] DIFFICULTY_LEVELS = {"easy", "medium", "hard"};
 
-
-    public RecipeListResponse generateRecipes(GenerateRecipeRequest request) {
+    public RecipeListResponse generateUserRecipes(GenerateRecipeRequest request) {
         CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User myUser = userDetails.getUser();
         UserProfile profile = myUser.getProfile();
 
         String targetLanguage = resolveLanguage(request.requestLanguage(), profile);
-        String randomFourthDifficulty = DIFFICULTY_LEVELS[random.nextInt(DIFFICULTY_LEVELS.length)];
+        String batchId = java.util.UUID.randomUUID().toString();
+
+        return processGeneration(
+                request.ingredients(),
+                request.textQuery(),
+                null,
+                profile,
+                targetLanguage,
+                4,
+                RecipeOrigin.USER,
+                myUser,
+                batchId
+        );
+    }
+
+
+    public RecipeListResponse generateAdminRecipes(GenerateAdminRecipeRequest request) {
+        String targetLanguage = resolveLanguage(request.requestLanguage(), null);
+
+        return processGeneration(
+                request.ingredients(),
+                request.textQuery(),
+                request.challengeCuisine(),
+                null,
+                targetLanguage,
+                request.count(),
+                RecipeOrigin.ADMIN,
+                null,
+                null
+        );
+    }
+
+
+    private RecipeListResponse processGeneration(
+            List<String> rawIngredients,
+            String rawTextQuery,
+            String challengeCuisine,
+            UserProfile profile,
+            String targetLanguage,
+            int count,
+            RecipeOrigin origin,
+            User author,
+            String batchId) {
 
         List<String> safeIngredients = null;
-        if (request.ingredients() != null && !request.ingredients().isEmpty()) {
-            safeIngredients = inputSanitizer.sanitizeIngredientList(request.ingredients());
+        if (rawIngredients != null && !rawIngredients.isEmpty()) {
+            safeIngredients = inputSanitizer.sanitizeIngredientList(rawIngredients);
         }
 
         String safeTextQuery = null;
-        if (request.textQuery() != null && !request.textQuery().isBlank()) {
-            InputSanitizer.SanitizeResult result = inputSanitizer.sanitizeUserComment(request.textQuery());
+        if (rawTextQuery != null && !rawTextQuery.isBlank()) {
+            InputSanitizer.SanitizeResult result = inputSanitizer.sanitizeUserComment(rawTextQuery);
             if (!result.safe()) {
-                throw new AppException(
-                        ErrorCode.SECURITY_VIOLATION,
-                        result.message(),
-                        HttpStatus.BAD_REQUEST);
+                throw new AppException(ErrorCode.SECURITY_VIOLATION, result.message(), HttpStatus.BAD_REQUEST);
             }
             safeTextQuery = result.sanitized();
         }
 
-        if ((safeIngredients == null || safeIngredients.isEmpty()) && safeTextQuery == null) {
-            throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    "Будь ласка, введіть запит або додайте інгредієнти.",
-                    HttpStatus.BAD_REQUEST);
+        if ((safeIngredients == null || safeIngredients.isEmpty()) && safeTextQuery == null && challengeCuisine == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Будь ласка, введіть запит, додайте інгредієнти або вкажіть кухню.", HttpStatus.BAD_REQUEST);
         }
 
         String messagesPayload = recipePromptBuilder.buildUnifiedRecipeMessages(
-                safeIngredients, safeTextQuery, null, profile, targetLanguage, randomFourthDifficulty
+                safeIngredients, safeTextQuery, challengeCuisine, profile, targetLanguage, count
         );
 
         String rawJson = groqClient.sendTextRequest(messagesPayload);
 
         try {
             JsonNode rootNode = objectMapper.readTree(rawJson);
-
-            List<JsonNode> validatedNodes = outputValidator.validateRecipeList(rootNode);
+            List<JsonNode> validatedNodes = outputValidator.validateRecipeList(rootNode, count);
 
             if (validatedNodes.isEmpty()) {
                 log.error("AI returned invalid recipes. Raw response: {}", rawJson);
-                throw new AppException(
-                        ErrorCode.AI_GENERATION_FAILED,
-                        "ШІ не зміг створити валідні рецепти. Можливо, запит був некоректним. Будь ласка, спробуйте ще раз.",
-                        HttpStatus.SERVICE_UNAVAILABLE);
+                throw new AppException(ErrorCode.AI_GENERATION_FAILED, "ШІ не зміг створити валідні рецепти.", HttpStatus.SERVICE_UNAVAILABLE);
             }
 
-
-            String batchId = java.util.UUID.randomUUID().toString();
             List<RecipeItem> safeRecipes = new ArrayList<>();
 
             for (JsonNode node : validatedNodes) {
@@ -104,10 +130,10 @@ public class RecipeService {
                     String recipeJsonForDb = objectMapper.writeValueAsString(node);
 
                     com.cookquest.recipe.entity.Recipe recipeEntity = com.cookquest.recipe.entity.Recipe.builder()
-                            .author(myUser)
-                            .recipeJson(recipeJsonForDb)
+                            .author(author)
+                            .origin(origin)
                             .batchId(batchId)
-                            .isSaved(false)
+                            .recipeJson(recipeJsonForDb)
                             .createdAt(LocalDateTime.now())
                             .build();
 
@@ -148,11 +174,7 @@ public class RecipeService {
             }
 
             if (safeRecipes.isEmpty()) {
-                throw new AppException(
-                        ErrorCode.AI_GENERATION_FAILED,
-                        "На жаль, ШІ згенерував рецепти у некоректному форматі. Спробуйте ще раз.",
-                        HttpStatus.SERVICE_UNAVAILABLE
-                );
+                throw new AppException(ErrorCode.AI_GENERATION_FAILED, "На жаль, ШІ згенерував рецепти у некоректному форматі.", HttpStatus.SERVICE_UNAVAILABLE);
             }
 
             return new RecipeListResponse(safeRecipes);
@@ -161,10 +183,7 @@ public class RecipeService {
             throw ae;
         } catch (Exception e) {
             log.error("Failed to parse AI response: {}", rawJson, e);
-            throw new AppException(
-                    ErrorCode.AI_GENERATION_FAILED,
-                    "Помилка обробки рецептів від ШІ",
-                    HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new AppException(ErrorCode.AI_GENERATION_FAILED, "Помилка обробки рецептів від ШІ", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

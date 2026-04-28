@@ -1,6 +1,7 @@
 package com.cookquest.recipe.controller;
 
 import com.cookquest.recipe.dto.*;
+import com.cookquest.recipe.entity.RecipeOrigin;
 import com.cookquest.recipe.service.RecipeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -18,8 +19,8 @@ public class RecipeController {
     private final RecipeService recipeService;
 
     @PostMapping("/generate")
-    public ResponseEntity<RecipeListResponse> generate(@RequestBody GenerateRecipeRequest request) {
-        return ResponseEntity.ok(recipeService.generateRecipes(request));
+    public ResponseEntity<RecipeListResponse> generateUserRecipes(@RequestBody GenerateRecipeRequest request) {
+        return ResponseEntity.ok(recipeService.generateUserRecipes(request));
     }
 
     @PostMapping(value = "/recognize", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
