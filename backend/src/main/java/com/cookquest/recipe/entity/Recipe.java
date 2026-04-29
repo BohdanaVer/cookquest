@@ -30,4 +30,8 @@ public class Recipe {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "is_unlocked", nullable = false)
+    @Builder.Default
+    private boolean isUnlocked = false;
 }

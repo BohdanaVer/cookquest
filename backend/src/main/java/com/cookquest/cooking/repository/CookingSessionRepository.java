@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface CookingSessionRepository extends JpaRepository<CookingSession, Long> {
     List<CookingSession> findAllByUserAndStatus(User user, SessionStatus status);
@@ -17,4 +18,7 @@ public interface CookingSessionRepository extends JpaRepository<CookingSession, 
 
     boolean existsByUserIdAndBatchIdAndStatus(Long userId, String batchId, SessionStatus status);
 
-    long countByUserIdAndXpModeAndStartedAtAfter(Long userId, XpMode xpMode, LocalDateTime startOfDay);}
+    long countByUserIdAndXpModeAndStartedAtAfter(Long userId, XpMode xpMode, LocalDateTime startOfDay);
+
+    Optional<CookingSession> findFirstByUserIdAndRecipeIdAndStatus(Long userId, String recipeId, SessionStatus status);
+}
