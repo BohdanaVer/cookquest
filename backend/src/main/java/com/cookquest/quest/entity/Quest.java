@@ -1,4 +1,4 @@
-package com.cookquest.cooking.entity;
+package com.cookquest.quest.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -12,7 +12,6 @@ import java.time.LocalDate;
 @Table(name = "quests")
 @Data @NoArgsConstructor @AllArgsConstructor @Builder
 public class Quest {
-    // Наступні поля потрібні для коректної роботи cookingService
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -20,13 +19,13 @@ public class Quest {
     @Column(name = "recipe_id", nullable = false, length = 36)
     private String recipeId;
 
-    @Column(name = "active_date", nullable = false)
-    private LocalDate activeDate;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "day_id", nullable = false, unique = true)
+    private Day day;
 
     @Column(name = "xp_multiplier", nullable = false)
     @Builder.Default
     private Double xpMultiplier = 1.0;
-    // Кінець нобхідних полів
 
 
     @Column(name = "cuisine_name")

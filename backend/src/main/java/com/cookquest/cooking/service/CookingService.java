@@ -10,15 +10,15 @@ import com.cookquest.cooking.dto.CookingSessionDto;
 import com.cookquest.cooking.dto.StartCookingRequest;
 import com.cookquest.cooking.dto.StepVerificationResponse;
 import com.cookquest.cooking.entity.*;
-import com.cookquest.cooking.repository.CompletedQuestRepository;
 import com.cookquest.cooking.repository.CookingSessionRepository;
-import com.cookquest.cooking.repository.QuestRepository;
 import com.cookquest.cooking.repository.UsedBatchRepository;
 import com.cookquest.profile.entity.Language;
 import com.cookquest.profile.entity.UserProfile;
 import com.cookquest.common.ai.GroqClient;
 import com.cookquest.recipe.entity.Recipe;
 import com.cookquest.recipe.repository.RecipeRepository;
+// НОВИЙ ІМПОРТ:
+import com.cookquest.quest.service.QuestService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
@@ -47,13 +46,12 @@ public class CookingService {
     private final VerificationValidator validator;
     private final RecipeRepository recipeRepository;
     private final UsedBatchRepository usedBatchRepository;
-    private final QuestRepository questRepository;
-    private final CompletedQuestRepository completedQuestRepository;
+
+    private final QuestService questService;
 
     private UserProfile getCurrentUserProfile() {
         CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        User myUser = userDetails.getUser();
-        return myUser.getProfile();
+        return userDetails.getUser().getProfile();
     }
 
     private User getCurrentUser() {
@@ -67,19 +65,15 @@ public class CookingService {
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Рецепт не знайдено", HttpStatus.NOT_FOUND));
 
         User user = getCurrentUser();
-        Quest todayQuest = questRepository.findByRecipeIdAndActiveDate(recipe.getId(), LocalDate.now());
 
-        XpMode xpMode = determineXpMode(user, recipe, todayQuest);
+        boolean isQuestAvailable = questService.isQuestAvailableTodayForRecipe(recipe.getId());
+        boolean isQuestCompleted = questService.isQuestCompletedByUser(user.getId(), recipe.getId());
+
+        XpMode xpMode = determineXpMode(user, recipe, isQuestAvailable, isQuestCompleted);
 
         if (xpMode == XpMode.FULL) {
-            if (todayQuest != null) {
-                completedQuestRepository.save(
-                        CompletedQuest.builder()
-                                .user(user)
-                                .quest(todayQuest)
-                                .startedAt(LocalDateTime.now())
-                                .build()
-                );
+            if (isQuestAvailable) {
+                questService.startQuestProgress(user, recipe.getId());
             } else if (recipe.getBatchId() != null) {
                 usedBatchRepository.save(
                         UsedBatch.builder()
@@ -106,10 +100,9 @@ public class CookingService {
         return mapToDto(sessionRepository.save(session));
     }
 
-    private XpMode determineXpMode(User user, Recipe recipe, Quest todayQuest) {
-        if (todayQuest != null) {
-            boolean questAlreadyDone = completedQuestRepository.existsByUserIdAndQuestId(user.getId(), todayQuest.getId());
-            return questAlreadyDone ? XpMode.NONE : XpMode.FULL;
+    private XpMode determineXpMode(User user, Recipe recipe, boolean isQuestAvailable, boolean isQuestCompleted) {
+        if (isQuestAvailable) {
+            return isQuestCompleted ? XpMode.NONE : XpMode.FULL;
         }
 
         boolean isAuthor = recipe.getAuthor() != null && recipe.getAuthor().getId().equals(user.getId());
@@ -157,7 +150,6 @@ public class CookingService {
 
         UserProfile profile = getCurrentUserProfile();
         User currentUser = session.getUser();
-
         String targetLanguage = resolveLanguage(requestLanguage, profile);
 
         try {
@@ -197,8 +189,6 @@ public class CookingService {
                         100, true, "Ідеально виконано! (Auto-Approve by Admin)", true, true
                 );
             } else {
-
-
                 if (session.getXpMode() == XpMode.NONE) {
                     result = new VerificationValidator.StepVerificationResult(100, true, "Крок пройдено! (Вільне готування)", false, true);
                 } else if (session.getXpMode() == XpMode.REDUCED && !isFinalStep) {
@@ -232,26 +222,8 @@ public class CookingService {
                     int totalXpToAward = 0;
 
                     if (session.getXpMode() == XpMode.FULL) {
-                        double currentMultiplier = 1.0;
 
-                        Quest activeQuestAtCompletion = questRepository.findByRecipeIdAndActiveDate(session.getRecipeId(), LocalDate.now());
-
-                        if (activeQuestAtCompletion != null) {
-                            boolean alreadyCompleted = completedQuestRepository.existsByUserIdAndQuestId(currentUser.getId(), activeQuestAtCompletion.getId());
-
-                            if (!alreadyCompleted) {
-                                currentMultiplier = activeQuestAtCompletion.getXpMultiplier();
-
-                                completedQuestRepository.save(
-                                        CompletedQuest.builder()
-                                                .user(currentUser)
-                                                .quest(activeQuestAtCompletion)
-                                                .startedAt(session.getStartedAt())
-                                                .completedAt(LocalDateTime.now())
-                                                .build()
-                                );
-                            }
-                        }
+                        double currentMultiplier = questService.completeQuestAndGetMultiplier(currentUser, session.getRecipeId(), session.getStartedAt());
 
                         int questBasePoints = (int) (basePoints * currentMultiplier);
                         totalXpToAward = questBasePoints + session.getEarnedPoints();

@@ -1,4 +1,4 @@
-package com.cookquest.recipe.controller;
+package com.cookquest.quest.controller;
 
 import com.cookquest.recipe.dto.GenerateAdminRecipeRequest;
 import com.cookquest.recipe.dto.RecipeListResponse;
@@ -19,8 +19,10 @@ public class AdminRecipeController {
     private final RecipeService recipeService;
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/admin/generate")
-    public ResponseEntity<RecipeListResponse> generateAdminRecipes(@RequestBody GenerateAdminRecipeRequest request) {
+    @PostMapping("/generate")
+    public ResponseEntity<RecipeListResponse> generateAdminRecipes(
+            @RequestBody GenerateAdminRecipeRequest request
+    ) {
         return ResponseEntity.ok(recipeService.generateAdminRecipes(request));
     }
 

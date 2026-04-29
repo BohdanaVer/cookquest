@@ -20,6 +20,7 @@ export default function Login() {
             const response = await api.post('/api/auth/login', data);
             
             localStorage.setItem('token', response.data.token);
+            localStorage.setItem('role', response.data.role);
             toast.success("З поверненням!");
             navigate('/home');
             

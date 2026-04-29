@@ -1,4 +1,4 @@
-package com.cookquest.cooking.entity;
+package com.cookquest.quest.entity;
 
 import com.cookquest.auth.entity.User;
 import jakarta.persistence.*;

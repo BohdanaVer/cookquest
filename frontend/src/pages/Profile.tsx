@@ -90,7 +90,7 @@ export default function Profile() {
         };
 
         fetchProfile();
-    }, [i18n]);
+    }, []);
 
     const handleSave = async () => {
         setSaving(true);
