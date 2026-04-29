@@ -18,6 +18,8 @@ import Leaderboard from './pages/Leaderboard';
 import Friends from './pages/Friends';
 import Challenges from './pages/Challenges';
 import Profile from './pages/Profile';
+import AdminRoute from "./components/AdminRoute.tsx";
+import AdminQuestsPanel from './pages/AdminQuestsPanel';
 
 export default function App() {
   return (
@@ -41,6 +43,10 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/friends" element={<Friends />} />
             <Route path="/challenges" element={<Challenges />} />
+          </Route>
+
+          <Route element={<AdminRoute />}>
+            <Route path="/admin/quests" element={<AdminQuestsPanel />} />
           </Route>
         </Routes>
         

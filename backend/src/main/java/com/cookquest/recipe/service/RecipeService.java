@@ -11,10 +11,12 @@ import com.cookquest.recipe.ai.prompt.VisionPromptBuilder;
 import com.cookquest.recipe.ai.validator.InputSanitizer;
 import com.cookquest.recipe.ai.validator.OutputValidator;
 import com.cookquest.recipe.dto.*;
+import com.cookquest.recipe.entity.Recipe;
 import com.cookquest.recipe.entity.RecipeOrigin;
 import com.cookquest.recipe.repository.RecipeRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -275,4 +277,13 @@ public class RecipeService {
 
         return "English";
     }
+
+//    @Transactional
+//    public void updateRecipeJson(String recipeId, String newRecipeJson) {
+//        Recipe recipe = recipeRepository.findById(recipeId)
+//                .orElseThrow(() -> new RuntimeException("Рецепт не знайдено з id: " + recipeId));
+//
+//        recipe.setRecipeJson(newRecipeJson);
+//        recipeRepository.save(recipe);
+//    }
 }

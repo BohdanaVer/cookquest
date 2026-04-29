@@ -153,5 +153,46 @@
     "ranking": "Rating",
     "shop": "Shop",
     "friends": "Friends"
+  },
+
+  "quests": {
+    "title": "Quests",
+    "subtitle": "Complete tasks and earn experience",
+    "adminBtn": "Quest Panel",
+    "empty": "No active quests at the moment. Come back later!",
+    "loading": "Looking for new challenges...",
+    "activeDate": "Active from:",
+    "multiplier": "Multiplier:",
+    "startBtn": "Start Quest",
+    "fetchError": "Failed to load quests"
+  },
+  "adminQuests": {
+    "title": "Admin Panel",
+    "subtitle": "Manage quests and rewards",
+    "editTitle": "Edit Quest",
+    "createTitle": "Create New Quest",
+    "cancel": "Cancel",
+    "recipeId": "Recipe ID",
+    "recipeIdPlaceholder": "E.g. 123e4567-e89b-12d3...",
+    "cuisineName": "Cuisine Name / Week",
+    "cuisinePlaceholder": "Italian Cuisine",
+    "activeDate": "Activation Date",
+    "xpMultiplier": "XP Multiplier",
+    "saving": "Saving...",
+    "saveBtn": "Save Changes",
+    "createBtn": "Create Quest",
+    "listTitle": "Active Quests List",
+    "loading": "Loading...",
+    "emptyList": "No quests yet. Create the first one above!",
+    "date": "Date",
+    "recipe": "Recipe",
+    "editBtn": "Edit",
+    "confirmDelete": "Are you sure you want to delete this quest?",
+    "successUpdate": "Quest successfully updated!",
+    "successCreate": "New quest created!",
+    "errorSave": "Error saving quest",
+    "successDelete": "Quest deleted",
+    "errorDelete": "Error deleting quest",
+    "errorFetch": "Error loading quests"
   }
 }

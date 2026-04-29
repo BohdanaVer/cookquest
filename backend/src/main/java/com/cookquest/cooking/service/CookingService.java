@@ -52,8 +52,7 @@ public class CookingService {
     // !!! оці два тоже напрягають
     private UserProfile getCurrentUserProfile() {
         CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        User myUser = userDetails.getUser();
-        return myUser.getProfile();
+        return userDetails.getUser().getProfile();
     }
 
     private User getCurrentUser() {
