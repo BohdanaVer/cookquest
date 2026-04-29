@@ -125,6 +125,8 @@ public class RecipeService {
 
             List<RecipeItem> safeRecipes = new ArrayList<>();
 
+            boolean isUnlockedForDb = (origin == RecipeOrigin.ADMIN);
+
             for (JsonNode node : validatedNodes) {
                 try {
                     String recipeJsonForDb = objectMapper.writeValueAsString(node);
@@ -134,6 +136,7 @@ public class RecipeService {
                             .origin(origin)
                             .batchId(batchId)
                             .recipeJson(recipeJsonForDb)
+                            .isUnlocked(isUnlockedForDb)
                             .createdAt(LocalDateTime.now())
                             .build();
 
@@ -153,6 +156,18 @@ public class RecipeService {
                         }
                     }
 
+                    List<StepDTO> parsedSteps = new ArrayList<>();
+
+                    if (isUnlockedForDb && node.has("steps") && node.get("steps").isArray()) {
+                        for (JsonNode stepNode : node.get("steps")) {
+                            parsedSteps.add(new StepDTO(
+                                    stepNode.path("text").asText(),
+                                    stepNode.path("isCheckpoint").asBoolean(),
+                                    stepNode.path("checkpointLabel").asText(null)
+                            ));
+                        }
+                    }
+
                     RecipeItem finalItem = new RecipeItem(
                             node.path("name").asText(),
                             node.path("description").asText(),
@@ -162,6 +177,7 @@ public class RecipeService {
                             node.path("cuisine").asText(),
                             dietaryTags,
                             parsedIngredients,
+                            parsedSteps,
                             node.path("steps").size(),
                             recipeEntity.getId()
                     );
