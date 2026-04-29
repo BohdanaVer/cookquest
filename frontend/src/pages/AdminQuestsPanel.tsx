@@ -1,48 +1,67 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/axiosClient';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Edit2, Trash2, Save, X, Target } from 'lucide-react';
+import { ArrowLeft, Plus, Edit2, Trash2, Save, X, Target, Wand2, Calendar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+interface Day {
+    id: number;
+    date: string;
+    dayOfWeek: string;
+}
+
+interface Week {
+    id: number;
+    theme: string;
+    startDate: string;
+    endDate: string;
+    days: Day[];
+}
 
 interface Quest {
     id: number;
     recipeId: string;
-    activeDate: string;
+    dayId: number;
     xpMultiplier: number;
-    cuisineName: string;
+    cuisineName?: string;
 }
 
 interface QuestFormState {
     recipeId: string;
-    activeDate: string;
+    dayId: number | '';
     xpMultiplier: number;
-    cuisineName: string;
 }
-
-const INITIAL_FORM_STATE: QuestFormState = {
-    recipeId: '',
-    activeDate: new Date().toISOString().split('T')[0],
-    xpMultiplier: 1.0,
-    cuisineName: ''
-};
 
 export default function AdminQuestsPanel() {
     const { t } = useTranslation();
 
     const [quests, setQuests] = useState<Quest[]>([]);
+    const [weeks, setWeeks] = useState<Week[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
-    const [formData, setFormData] = useState<QuestFormState>(INITIAL_FORM_STATE);
+    const [formData, setFormData] = useState<QuestFormState>({ recipeId: '', dayId: '', xpMultiplier: 1.0 });
     const [editingId, setEditingId] = useState<number | null>(null);
 
-    const fetchQuests = useCallback(async () => {
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [recipeJson, setRecipeJson] = useState('');
+    const [generating, setGenerating] = useState(false);
+    const [updatingRecipe, setUpdatingRecipe] = useState(false);
+
+    const [weekTheme, setWeekTheme] = useState('');
+    const [weekStartDate, setWeekStartDate] = useState('');
+
+    const fetchData = useCallback(async () => {
         try {
-            const response = await api.get('/api/v1/admin/quests');
-            setQuests(response.data);
+            const [questsRes, weeksRes] = await Promise.all([
+                api.get('/api/v1/admin/quests'),
+                api.get('/api/v1/admin/quests/weeks')
+            ]);
+            setQuests(questsRes.data);
+            setWeeks(weeksRes.data);
         } catch (error) {
-            toast.error(t('adminQuests.errorFetch'));
+            toast.error(t('adminQuests.errorFetch', 'Помилка завантаження даних'));
             console.error(error);
         } finally {
             setLoading(false);
@@ -50,75 +69,113 @@ export default function AdminQuestsPanel() {
     }, [t]);
 
     useEffect(() => {
-        const loadInitialData = async () => {
-            await fetchQuests();
-        };
-        loadInitialData();
-    }, [fetchQuests]);
+        fetchData();
+    }, [fetchData]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCreateWeek = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        const dateObj = new Date(weekStartDate);
+        if (dateObj.getDay() !== 1) {
+            toast.error("Помилка! Дата початку має бути виключно Понеділком.");
+            return;
+        }
+
+        try {
+            await api.post('/api/v1/admin/quests', { theme: weekTheme, startDate: weekStartDate });
+            toast.success("Новий тиждень успішно створено!");
+            setWeekTheme('');
+            setWeekStartDate('');
+            fetchData();
+        } catch (error) {
+            toast.error("Помилка створення тижня");
+        }
+    };
+
+    const handleGenerateRecipe = async () => {
+        if (!aiPrompt.trim()) {
+            toast.warning("Введіть запит для генерації");
+            return;
+        }
+
+        setGenerating(true);
+        try {
+            const payload = {
+                ingredients: [],
+                textQuery: aiPrompt,
+                challengeCuisine: "Глобальний квест",
+                count: 1,
+                requestLanguage: "uk"
+            };
+
+            const response = await api.post('/api/v1/admin/recipes/generate', payload);
+            const generatedRecipe = response.data.recipes[0];
+
+            if (generatedRecipe) {
+                setFormData(prev => ({ ...prev, recipeId: generatedRecipe.id }));
+                setRecipeJson(JSON.stringify(generatedRecipe, null, 2));
+                toast.success("Рецепт згенеровано та збережено в базу!");
+            }
+        } catch (error) {
+            toast.error("Помилка генерації");
+            console.error(error);
+        } finally {
+            setGenerating(false);
+        }
+    };
+
+    const handleUpdateRecipeJson = async () => {
+        if (!formData.recipeId || !recipeJson) return;
+        setUpdatingRecipe(true);
+        try {
+            await api.put(`/api/v1/admin/recipes/${formData.recipeId}`, JSON.parse(recipeJson));
+            toast.success("Відредагований текст рецепту збережено!");
+        } catch (error) {
+            toast.error("Помилка оновлення JSON. Перевірте синтаксис.");
+        } finally {
+            setUpdatingRecipe(false);
+        }
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: name === 'xpMultiplier' ? parseFloat(value) || 1.0 : value
+            [name]: name === 'xpMultiplier' || name === 'dayId' ? Number(value) : value
         }));
     };
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmitQuest = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitting(true);
-
         try {
             if (editingId) {
                 await api.put(`/api/v1/admin/quests/${editingId}`, formData);
-                toast.success(t('adminQuests.successUpdate'));
+                toast.success(t('adminQuests.successUpdate', 'Квест оновлено'));
             } else {
                 await api.post('/api/v1/admin/quests', formData);
-                toast.success(t('adminQuests.successCreate'));
+                toast.success(t('adminQuests.successCreate', 'Квест створено'));
             }
-
             resetForm();
-            await fetchQuests();
+            fetchData();
         } catch (error) {
-            toast.error(t('adminQuests.errorSave'));
-            console.error(error);
+            toast.error(t('adminQuests.errorSave', 'Помилка збереження квесту'));
         } finally {
             setSubmitting(false);
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!window.confirm(t('adminQuests.confirmDelete'))) return;
-
-        try {
-            await api.delete(`/api/v1/admin/quests/${id}`);
-            toast.success(t('adminQuests.successDelete'));
-            await fetchQuests();
-        } catch (error) {
-            toast.error(t('adminQuests.errorDelete'));
-            console.error(error);
-        }
-    };
-
-    const handleEdit = (quest: Quest) => {
-        setEditingId(quest.id);
-        setFormData({
-            recipeId: quest.recipeId,
-            activeDate: quest.activeDate,
-            xpMultiplier: quest.xpMultiplier,
-            cuisineName: quest.cuisineName
-        });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
     const resetForm = () => {
         setEditingId(null);
-        setFormData(INITIAL_FORM_STATE);
+        setFormData({ recipeId: '', dayId: '', xpMultiplier: 1.0 });
+        setRecipeJson('');
+        setAiPrompt('');
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500 pb-10">
+        <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 pb-10">
 
+            {/* ШАПКА */}
             <div className="flex items-center gap-4 bg-[#1a1a2e] rounded-2xl border border-white/5 p-4">
                 <Link to="/challenges" className="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400">
                     <ArrowLeft size={20} />
@@ -126,139 +183,166 @@ export default function AdminQuestsPanel() {
                 <div>
                     <h1 className="text-xl font-extrabold text-white flex items-center gap-2">
                         <Target className="text-red-400" />
-                        {t('adminQuests.title')}
+                        {t('adminQuests.title', 'Панель адміністратора')}
                     </h1>
-                    <p className="text-xs text-gray-400">{t('adminQuests.subtitle')}</p>
+                    <p className="text-xs text-gray-400">{t('adminQuests.subtitle', 'Керування тижнями та квестами')}</p>
                 </div>
             </div>
 
-            <div className="bg-[#1a1a2e] rounded-2xl border border-white/5 p-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-bold text-white">
-                        {editingId ? t('adminQuests.editTitle') : t('adminQuests.createTitle')}
-                    </h2>
-                    {editingId && (
-                        <button onClick={resetForm} className="text-sm text-gray-400 hover:text-white flex items-center gap-1">
-                            <X size={16} /> {t('adminQuests.cancel')}
-                        </button>
-                    )}
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">{t('adminQuests.recipeId')}</label>
-                        <input
-                            required
-                            name="recipeId"
-                            value={formData.recipeId}
-                            onChange={handleChange}
-                            placeholder={t('adminQuests.recipeIdPlaceholder')}
-                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-red-500/50"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">{t('adminQuests.cuisineName')}</label>
-                        <input
-                            required
-                            name="cuisineName"
-                            value={formData.cuisineName}
-                            onChange={handleChange}
-                            placeholder={t('adminQuests.cuisinePlaceholder')}
-                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-red-500/50"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">{t('adminQuests.activeDate')}</label>
-                        <input
-                            required
-                            type="date"
-                            name="activeDate"
-                            value={formData.activeDate}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-red-500/50"
-                            style={{ colorScheme: 'dark' }}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">{t('adminQuests.xpMultiplier')}</label>
-                        <input
-                            required
-                            type="number"
-                            step="0.1"
-                            min="0.1"
-                            name="xpMultiplier"
-                            value={formData.xpMultiplier}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-red-500/50"
-                        />
-                    </div>
-
-                    <div className="md:col-span-2 pt-2">
-                        <button
-                            type="submit"
-                            disabled={submitting}
-                            className="w-full bg-red-500 hover:bg-red-400 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                        >
-                            {submitting
-                                ? t('adminQuests.saving')
-                                : editingId
-                                    ? <><Save size={18} /> {t('adminQuests.saveBtn')}</>
-                                    : <><Plus size={18} /> {t('adminQuests.createBtn')}</>}
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <div className="bg-[#1a1a2e] rounded-2xl border border-white/5 p-6">
-                <h2 className="text-lg font-bold text-white mb-4">{t('adminQuests.listTitle')}</h2>
-
-                {loading ? (
-                    <div className="text-center py-8 text-gray-500">{t('adminQuests.loading')}</div>
-                ) : quests.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500 bg-white/5 rounded-xl border border-dashed border-white/10">
-                        {t('adminQuests.emptyList')}
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {quests.map(quest => (
-                            <div key={quest.id} className="flex flex-col md:flex-row md:items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5 gap-4">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-[10px] font-bold">
-                                            ID: {quest.id}
-                                        </span>
-                                        <h3 className="font-bold text-white">{quest.cuisineName}</h3>
-                                    </div>
-                                    <div className="text-xs text-gray-400 space-y-1">
-                                        <p>🗓 {t('adminQuests.date')}: <span className="text-gray-300">{quest.activeDate}</span></p>
-                                        <p>⚡️ {t('adminQuests.xpMultiplier')}: <span className="text-yellow-400 font-bold">x{quest.xpMultiplier}</span></p>
-                                        <p className="truncate">🍲 {t('adminQuests.recipe')}: {quest.recipeId}</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => handleEdit(quest)}
-                                        className="flex-1 md:flex-none flex items-center justify-center gap-1 px-3 py-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg text-xs font-bold transition-colors"
-                                    >
-                                        <Edit2 size={14} /> {t('adminQuests.editBtn')}
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(quest.id)}
-                                        className="flex-1 md:flex-none flex items-center justify-center gap-1 px-3 py-2 bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-400 rounded-lg text-xs font-bold transition-colors"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
+                <div className="lg:col-span-1 space-y-6">
+                    <div className="bg-[#1a1a2e] rounded-2xl border border-white/5 p-6">
+                        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <Calendar size={18} className="text-blue-400" /> Створити Тиждень
+                        </h2>
+                        <form onSubmit={handleCreateWeek} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">Дата початку (Понеділок)</label>
+                                <input
+                                    required
+                                    type="date"
+                                    value={weekStartDate}
+                                    onChange={(e) => setWeekStartDate(e.target.value)}
+                                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500/50"
+                                    style={{ colorScheme: 'dark' }}
+                                />
                             </div>
-                        ))}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">Тематика (Кухня)</label>
+                                <input
+                                    required
+                                    value={weekTheme}
+                                    onChange={(e) => setWeekTheme(e.target.value)}
+                                    placeholder="Напр. Італійський тиждень"
+                                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500/50"
+                                />
+                            </div>
+                            <button type="submit" className="w-full bg-blue-500 hover:bg-blue-400 text-white font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
+                                <Plus size={16} /> Додати тиждень
+                            </button>
+                        </form>
                     </div>
-                )}
-            </div>
+                </div>
 
+                <div className="lg:col-span-2 space-y-6">
+
+                    <div className="bg-[#1a1a2e] rounded-2xl border border-white/5 p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-lg font-bold text-white">
+                                {editingId ? 'Редагування квесту' : 'Створити новий квест'}
+                            </h2>
+                            {editingId && (
+                                <button onClick={resetForm} className="text-sm text-gray-400 hover:text-white flex items-center gap-1">
+                                    <X size={16} /> Скасувати
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="mb-6 bg-purple-500/5 border border-purple-500/20 p-4 rounded-xl space-y-3">
+                            <label className="block text-xs font-bold text-purple-400 uppercase">1. Згенерувати або вставити рецепт</label>
+
+                            <div className="flex gap-2">
+                                <input
+                                    value={aiPrompt}
+                                    onChange={(e) => setAiPrompt(e.target.value)}
+                                    placeholder="Напр. Згенеруй класичний рецепт лазаньї..."
+                                    className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-purple-500/50"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleGenerateRecipe}
+                                    disabled={generating}
+                                    className="bg-purple-500 hover:bg-purple-400 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2"
+                                >
+                                    <Wand2 size={16} /> {generating ? 'Генерація...' : 'ШІ'}
+                                </button>
+                            </div>
+
+                            <textarea
+                                value={recipeJson}
+                                onChange={(e) => setRecipeJson(e.target.value)}
+                                rows={6}
+                                placeholder="Тут з'явиться JSON згенерованого рецепту. Ви можете редагувати його вручну..."
+                                className="w-full px-4 py-2 bg-[#0f0f1a] border border-white/10 rounded-xl text-xs text-green-400 font-mono focus:outline-none focus:border-purple-500/50 resize-y"
+                            />
+
+                            {recipeJson && (
+                                <button
+                                    type="button"
+                                    onClick={handleUpdateRecipeJson}
+                                    disabled={updatingRecipe}
+                                    className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold py-2 rounded-xl text-sm transition-colors"
+                                >
+                                    {updatingRecipe ? 'Збереження...' : '💾 Зберегти зміни в тексті рецепту'}
+                                </button>
+                            )}
+                        </div>
+
+                        <form onSubmit={handleSubmitQuest} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">ID Рецепту</label>
+                                <input
+                                    required
+                                    name="recipeId"
+                                    value={formData.recipeId}
+                                    onChange={handleChange}
+                                    placeholder="Згенерується автоматично або введіть вручну"
+                                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-red-500/50"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">Множник XP</label>
+                                <input
+                                    required
+                                    type="number"
+                                    step="0.1"
+                                    min="0.1"
+                                    name="xpMultiplier"
+                                    value={formData.xpMultiplier}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-red-500/50"
+                                />
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">2. Прив'язка до Дня (Тижня)</label>
+                                <select
+                                    required
+                                    name="dayId"
+                                    value={formData.dayId}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2 bg-[#1a1a2e] border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-red-500/50"
+                                >
+                                    <option value="" disabled>Оберіть день...</option>
+                                    {weeks.map(week => (
+                                        <optgroup key={week.id} label={`${week.theme} (${week.startDate})`}>
+                                            {week.days.map(day => (
+                                                <option key={day.id} value={day.id}>
+                                                    {day.dayOfWeek} - {day.date}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="md:col-span-2 pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="w-full bg-red-500 hover:bg-red-400 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {submitting ? 'Збереження...' : editingId ? <><Save size={18} /> Зберегти зміни Квесту</> : <><Plus size={18} /> Створити Квест</>}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
         </div>
     );
 }

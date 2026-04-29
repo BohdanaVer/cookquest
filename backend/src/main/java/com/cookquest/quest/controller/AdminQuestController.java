@@ -1,7 +1,9 @@
 package com.cookquest.quest.controller;
 
 import com.cookquest.quest.dto.QuestRequestDTO;
+import com.cookquest.quest.dto.WeekRequestDTO;
 import com.cookquest.quest.entity.Quest;
+import com.cookquest.quest.entity.Week;
 import com.cookquest.quest.service.QuestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -37,5 +39,15 @@ public class AdminQuestController {
     public ResponseEntity<Void> deleteQuest(@PathVariable Long id) {
         questService.deleteQuest(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/weeks")
+    public ResponseEntity<List<Week>> getAllWeeks() {
+        return ResponseEntity.ok(questService.getAllWeeks());
+    }
+
+    @PostMapping("/weeks")
+    public ResponseEntity<Week> createWeek(@RequestBody WeekRequestDTO request) {
+        return ResponseEntity.ok(questService.createWeek(request));
     }
 }

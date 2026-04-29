@@ -3,13 +3,11 @@ package com.cookquest.quest.controller;
 import com.cookquest.recipe.dto.GenerateAdminRecipeRequest;
 import com.cookquest.recipe.dto.RecipeListResponse;
 import com.cookquest.recipe.service.RecipeService;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/admin/recipes")
@@ -26,7 +24,15 @@ public class AdminRecipeController {
         return ResponseEntity.ok(recipeService.generateAdminRecipes(request));
     }
 
-    // Тут же потім додаси ендпоінти для ручного редагування:
-    // @PutMapping("/{id}")
-    // public ResponseEntity<Void> updateSystemRecipe(...)
+    // НОВИЙ МЕТОД ДЛЯ РЕДАГУВАННЯ ТЕКСТУ РЕЦЕПТА
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<Void> updateSystemRecipe(
+            @PathVariable String id,
+            @RequestBody JsonNode recipeJson
+    ) {
+        // Перетворюємо JsonNode назад у String для збереження в базу
+        recipeService.updateRecipeJson(id, recipeJson.toString());
+        return ResponseEntity.ok().build();
+    }
 }
