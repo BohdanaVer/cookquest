@@ -112,7 +112,7 @@ public class QuestService {
 
 
     @Transactional(readOnly = true)
-    public boolean isQuestAvailableTodayForRecipe(String recipeId) {
+    public boolean isQuestActiveToday(String recipeId) {
         return questRepository.findByRecipeIdAndDayDate(recipeId, LocalDate.now()).isPresent();
     }
 
@@ -129,16 +129,16 @@ public class QuestService {
     }
 
     @Transactional
-    public void startQuestProgress(User user, String recipeId) {
+    public void startQuestProgress(Long userId, String recipeId) {
         Optional<Quest> todayQuestOpt = questRepository.findByRecipeIdAndDayDate(recipeId, LocalDate.now());
         if (todayQuestOpt.isEmpty()) return;
 
         Quest todayQuest = todayQuestOpt.get();
 
-        if (!completedQuestRepository.existsByUserIdAndQuestId(user.getId(), todayQuest.getId())) {
+        if (!completedQuestRepository.existsByUserIdAndQuestId(userId, todayQuest.getId())) {
             completedQuestRepository.save(
                     CompletedQuest.builder()
-                            .user(user)
+                            .userId(userId)
                             .quest(todayQuest)
                             .startedAt(LocalDateTime.now())
                             .build()
@@ -146,34 +146,41 @@ public class QuestService {
         }
     }
 
-    @Transactional
-    public double completeQuestAndGetMultiplier(User user, String recipeId, LocalDateTime sessionStartedAt) {
+    @Transactional(readOnly = true)
+    public Double getQuestMultiplier(String recipeId) {
         Optional<Quest> todayQuestOpt = questRepository.findByRecipeIdAndDayDate(recipeId, LocalDate.now());
-        if (todayQuestOpt.isEmpty()) {
-            return 1.0;
-        }
+        // Якщо квесту немає, повертаємо базовий множник 1.0
+        return todayQuestOpt.map(Quest::getXpMultiplier).orElse(1.0);
+    }
 
+    @Transactional
+    public void markQuestCompleted(Long userId, String recipeId, LocalDateTime startedAt) {
+        Optional<Quest> todayQuestOpt = questRepository.findByRecipeIdAndDayDate(recipeId, LocalDate.now());
+
+        if (todayQuestOpt.isEmpty()) {
+            return;
+        }
         Quest todayQuest = todayQuestOpt.get();
-        Optional<CompletedQuest> cqOpt = completedQuestRepository.findByUserIdAndQuestId(user.getId(), todayQuest.getId());
+
+        Optional<CompletedQuest> cqOpt = completedQuestRepository.findByUserIdAndQuestId(userId, todayQuest.getId());
 
         if (cqOpt.isPresent()) {
             CompletedQuest cq = cqOpt.get();
-            if (cq.getCompletedAt() != null) {
-                return 1.0;
+            // Якщо запис вже є, але без дати завершення (наприклад, створений при старті сесії)
+            if (cq.getCompletedAt() == null) {
+                cq.setCompletedAt(LocalDateTime.now());
+                completedQuestRepository.save(cq);
             }
-            cq.setCompletedAt(LocalDateTime.now());
-            completedQuestRepository.save(cq);
-            return todayQuest.getXpMultiplier();
         } else {
+
             completedQuestRepository.save(
                     CompletedQuest.builder()
-                            .user(user)
+                            .userId(userId)
                             .quest(todayQuest)
-                            .startedAt(sessionStartedAt)
+                            .startedAt(startedAt)
                             .completedAt(LocalDateTime.now())
                             .build()
             );
-            return todayQuest.getXpMultiplier();
         }
     }
 }

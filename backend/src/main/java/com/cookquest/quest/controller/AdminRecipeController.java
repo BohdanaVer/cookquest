@@ -24,6 +24,7 @@ public class AdminRecipeController {
         return ResponseEntity.ok(recipeService.generateAdminRecipes(request));
     }
 
+    /*
     // НОВИЙ МЕТОД ДЛЯ РЕДАГУВАННЯ ТЕКСТУ РЕЦЕПТА
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
@@ -35,4 +36,5 @@ public class AdminRecipeController {
         recipeService.updateRecipeJson(id, recipeJson.toString());
         return ResponseEntity.ok().build();
     }
+    */
 }
