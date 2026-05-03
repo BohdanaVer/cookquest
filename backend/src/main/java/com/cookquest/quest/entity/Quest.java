@@ -1,5 +1,6 @@
 package com.cookquest.quest.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +20,7 @@ public class Quest {
     @Column(name = "recipe_id", nullable = false, length = 36)
     private String recipeId;
 
+    @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "day_id", nullable = false, unique = true)
     private Day day;
@@ -30,4 +32,8 @@ public class Quest {
 
     @Column(name = "cuisine_name")
     private String cuisineName;
+
+    public Long getDayId() {
+        return day != null ? day.getId() : null;
+    }
 }
