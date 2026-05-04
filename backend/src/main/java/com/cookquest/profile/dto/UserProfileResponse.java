@@ -11,6 +11,6 @@ public record UserProfileResponse(
         int balance,
         int ratingScore,
         Language language,
-        String activeMascot,
+        Long activeMascotId,
         DietaryPreferences dietaryPreferences
 ) {}

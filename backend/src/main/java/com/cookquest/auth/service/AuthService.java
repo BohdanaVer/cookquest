@@ -10,6 +10,10 @@ import com.cookquest.auth.entity.Role;
 import com.cookquest.auth.entity.User;
 import com.cookquest.auth.entity.CustomUserDetails;
 import com.cookquest.auth.repository.UserRepository;
+import com.cookquest.mascot.entity.Mascot;
+import com.cookquest.mascot.entity.UserMascot;
+import com.cookquest.mascot.repository.MascotRepository;
+import com.cookquest.mascot.repository.UserMascotRepository;
 import com.cookquest.profile.entity.Language;
 import com.cookquest.profile.entity.UserProfile;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +25,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -31,12 +38,25 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final MascotRepository mascotRepository;
+    private final UserMascotRepository userMascotRepository;
 
+    private static final Long STARTER_MASCOT_ID = 1L;
+
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new AppException(
                     ErrorCode.EMAIL_ALREADY_EXISTS,
                     "Користувач з таким email вже зареєстрований",
+                    HttpStatus.CONFLICT
+            );
+        }
+
+        if (userRepository.existsByUsername(request.username())) {
+            throw new AppException(
+                    ErrorCode.USERNAME_ALREADY_EXISTS,
+                    "Користувач з таким іменем вже зареєстрований",
                     HttpStatus.CONFLICT
             );
         }
@@ -55,12 +75,22 @@ public class AuthService {
                 .balance(0)
                 .ratingScore(0)
                 .language(Language.UK)
-                .activeMascot("broccoli")
+                .activeMascotId(STARTER_MASCOT_ID)
                 .build();
 
         user.setProfile(profile);
 
         userRepository.save(user);
+
+        // Видаємо стартового маскота новому юзеру
+        mascotRepository.findById(STARTER_MASCOT_ID).ifPresent(starterMascot -> {
+            UserMascot userMascot = UserMascot.builder()
+                    .userId(user.getId())
+                    .mascot(starterMascot)
+                    .acquiredAt(LocalDateTime.now())
+                    .build();
+            userMascotRepository.save(userMascot);
+        });
 
         CustomUserDetails userDetails = new CustomUserDetails(user);
 

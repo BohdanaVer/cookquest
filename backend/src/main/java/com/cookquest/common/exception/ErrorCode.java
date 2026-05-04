@@ -3,6 +3,7 @@ package com.cookquest.common.exception;
 public enum ErrorCode {
     USER_NOT_FOUND,
     EMAIL_ALREADY_EXISTS,
+    USERNAME_ALREADY_EXISTS,
     INVALID_PASSWORD,
     BAD_CREDENTIALS,
     PROFILE_NOT_FOUND,

@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Builder
 public record CookingSessionDto(
         Long sessionId,
-        Object  recipe,
+        Object recipe,
         String status,
         int earnedPoints,
         LocalDateTime startedAt,

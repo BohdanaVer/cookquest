@@ -1,7 +1,7 @@
 package com.cookquest.profile.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public record UpdateMascotRequest(
-        @NotBlank String activeMascot
+        @NotNull Long activeMascotId
 ) {}

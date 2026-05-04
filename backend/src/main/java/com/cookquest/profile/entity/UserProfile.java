@@ -33,7 +33,8 @@ public class UserProfile {
     @Enumerated(EnumType.STRING)
     private Language language;
 
-    private String activeMascot;
+    @Column(name = "active_mascot_id")
+    private Long activeMascotId;
 
     @Builder.Default // ВАЖЛИВО: щоб білдер зберіг це дефолтне значення
     @JdbcTypeCode(SqlTypes.JSON)

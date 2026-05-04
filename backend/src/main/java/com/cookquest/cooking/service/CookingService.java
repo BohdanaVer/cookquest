@@ -16,12 +16,15 @@ import com.cookquest.cooking.repository.CookingSessionRepository;
 import com.cookquest.cooking.repository.UsedBatchRepository;
 import com.cookquest.profile.entity.Language;
 import com.cookquest.profile.entity.UserProfile;
+import com.cookquest.profile.service.ProfileService;
 import com.cookquest.common.ai.GroqClient;
+import com.cookquest.cooking.integration.event.CookingSessionCompletedEvent;
 import com.cookquest.quest.service.QuestService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -47,16 +50,19 @@ public class CookingService {
     private final QuestService questIntegrationService;
     private final CookingRewardService cookingRewardService;
     private final RecipeIntegrationService recipeIntegrationService;
+    private final ProfileService profileService;
+    private final ApplicationEventPublisher eventPublisher;
 
-
-    // !!! оці два тоже напрягають
+    
     private UserProfile getCurrentUserProfile() {
-        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication()
+                .getPrincipal();
         return userDetails.getUser().getProfile();
     }
 
     private User getCurrentUser() {
-        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication()
+                .getPrincipal();
         return userDetails.getUser();
     }
 
@@ -65,8 +71,7 @@ public class CookingService {
         User user = getCurrentUser();
 
         var existingSession = sessionRepository.findFirstByUserIdAndRecipeIdAndStatus(
-                user.getId(), request.recipeId(), SessionStatus.IN_PROGRESS
-        );
+                user.getId(), request.recipeId(), SessionStatus.IN_PROGRESS);
 
         if (existingSession.isPresent()) {
             return mapToDto(existingSession.get());
@@ -88,8 +93,7 @@ public class CookingService {
                             .user(user)
                             .batchId(recipe.batchId())
                             .usedAt(LocalDateTime.now())
-                            .build()
-            );
+                            .build());
         }
 
         CookingSession session = CookingSession.builder()
@@ -121,11 +125,14 @@ public class CookingService {
     }
 
     @Transactional
-    public StepVerificationResponse verifyStep(Long sessionId, MultipartFile file, int stepNumber, String requestLanguage) {
+    public StepVerificationResponse verifyStep(Long sessionId, MultipartFile file, int stepNumber,
+            String requestLanguage) {
         CookingSession session = getActiveSessionStrict(sessionId);
 
         if (session.getXpMode() == XpMode.NONE) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Цей рецепт відкрито у режимі перегляду. Перевірка кроків для нього недоступна.", HttpStatus.BAD_REQUEST);
+            throw new AppException(ErrorCode.INVALID_REQUEST,
+                    "Цей рецепт відкрито у режимі перегляду. Перевірка кроків для нього недоступна.",
+                    HttpStatus.BAD_REQUEST);
         }
 
         UserProfile profile = getCurrentUserProfile();
@@ -142,15 +149,15 @@ public class CookingService {
             JsonNode currentStep = recipeNode.path("steps").get(stepNumber - 1);
             VerificationValidator.StepVerificationResult result = performVerification(
                     session, currentUser, file, recipeNode.path("name").asText(),
-                    stepNumber, currentStep, isFinalStep, targetLanguage
-            );
+                    stepNumber, currentStep, isFinalStep, targetLanguage);
 
+            int earnedPointsForStep = 0;
             if (result.passed()) {
                 if (isFinalStep) {
                     int basePoints = recipeNode.path("points").asInt(50);
-                    processFinalStep(session, currentUser, profile, basePoints);
+                    earnedPointsForStep = processFinalStep(session, currentUser, profile, basePoints);
                 } else {
-                    processIntermediateStep(session, stepNumber, result);
+                    earnedPointsForStep = processIntermediateStep(session, stepNumber, result);
                 }
             }
 
@@ -160,17 +167,21 @@ public class CookingService {
                     .feedback(result.feedback())
                     .bonusEligible(result.bonusEligible())
                     .sessionStatus(session.getStatus().name())
+                    .currentStepIndex(stepNumber)
+                    .earnedPointsForStep(earnedPointsForStep)
                     .build();
 
         } catch (AppException e) {
             throw e;
         } catch (Exception e) {
             log.error("Step verification error", e);
-            throw new AppException(ErrorCode.AI_VISION_FAILED, "Помилка перевірки ШІ", HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new AppException(ErrorCode.AI_VISION_FAILED, "Помилка перевірки ШІ",
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    private void validateStepRequest(CookingSession session, MultipartFile file, int stepNumber, int totalSteps, boolean isFinalStep) {
+    private void validateStepRequest(CookingSession session, MultipartFile file, int stepNumber, int totalSteps,
+            boolean isFinalStep) {
         int stepIndex = stepNumber - 1;
         if (stepIndex < 0 || stepIndex >= totalSteps) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Неправильний номер кроку", HttpStatus.BAD_REQUEST);
@@ -178,8 +189,14 @@ public class CookingService {
 
         if (file != null && !file.isEmpty()) {
             if (session.getXpMode() == XpMode.REDUCED && !isFinalStep) {
-                throw new AppException(ErrorCode.INVALID_REQUEST, "У цьому режимі фото приймається ЛИШЕ на фінальному кроці.", HttpStatus.BAD_REQUEST);
+                throw new AppException(ErrorCode.INVALID_REQUEST,
+                        "У цьому режимі фото приймається ЛИШЕ на фінальному кроці.", HttpStatus.BAD_REQUEST);
             }
+        }
+
+        String[] verified = session.getVerifiedSteps().split(",");
+        if (java.util.Arrays.asList(verified).contains(String.valueOf(stepNumber))) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Цей крок вже оцінено", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -192,14 +209,17 @@ public class CookingService {
 
         if (isAdmin) {
             log.info("Адміністратор перевіряє крок {}. Пропускаємо запит до ШІ.", stepNumber);
-            return new VerificationValidator.StepVerificationResult(100, true, "Ідеально виконано! (Auto-Approve by Admin)", true, true);
+            return new VerificationValidator.StepVerificationResult(100, true,
+                    "Ідеально виконано! (Auto-Approve by Admin)", true, true);
         }
 
         if (session.getXpMode() == XpMode.NONE) {
-            return new VerificationValidator.StepVerificationResult(100, true, "Крок пройдено! (Вільне готування)", false, true);
+            return new VerificationValidator.StepVerificationResult(100, true, "Крок пройдено! (Вільне готування)",
+                    false, true);
         }
         if (session.getXpMode() == XpMode.REDUCED && !isFinalStep) {
-            return new VerificationValidator.StepVerificationResult(100, true, "Крок пройдено! (ШІ оцінить фінальну страву)", false, true);
+            return new VerificationValidator.StepVerificationResult(100, true,
+                    "Крок пройдено! (ШІ оцінить фінальну страву)", false, true);
         }
 
         if (file == null || file.isEmpty()) {
@@ -211,26 +231,31 @@ public class CookingService {
         String base64 = Base64.getEncoder().encodeToString(file.getBytes());
         String imageUrl = "data:" + file.getContentType() + ";base64," + base64;
 
-        String messagesPayload = promptBuilder.buildMessages(imageUrl, recipeName, stepNumber, stepDesc, checkpointLabel, targetLanguage);
+        String messagesPayload = promptBuilder.buildMessages(imageUrl, recipeName, stepNumber, stepDesc,
+                checkpointLabel, targetLanguage);
         String rawResponse = groqClient.sendVisionRequestRaw(messagesPayload);
 
         return validator.validate(objectMapper.readTree(rawResponse));
     }
 
-    private void processIntermediateStep(CookingSession session, int stepNumber, VerificationValidator.StepVerificationResult result) {
+    private int processIntermediateStep(CookingSession session, int stepNumber,
+            VerificationValidator.StepVerificationResult result) {
         String verifiedStr = session.getVerifiedSteps();
 
         if (!verifiedStr.contains(String.valueOf(stepNumber))) {
-            session.setVerifiedSteps(verifiedStr.isEmpty() ? String.valueOf(stepNumber) : verifiedStr + "," + stepNumber);
+            session.setVerifiedSteps(
+                    verifiedStr.isEmpty() ? String.valueOf(stepNumber) : verifiedStr + "," + stepNumber);
 
             if (session.getXpMode() == XpMode.FULL) {
                 int bonus = result.bonusEligible() ? 20 : 15;
                 session.setEarnedPoints(session.getEarnedPoints() + bonus);
+                return bonus;
             }
         }
+        return 0;
     }
 
-    private void processFinalStep(CookingSession session, User currentUser, UserProfile profile, int basePoints) {
+    private int processFinalStep(CookingSession session, User currentUser, UserProfile profile, int basePoints) {
         session.setStatus(SessionStatus.COMPLETED);
         session.setCompletedAt(LocalDateTime.now());
 
@@ -241,11 +266,13 @@ public class CookingService {
             boolean downgradeToReduced = false;
 
             if (questIntegrationService.isQuestActiveToday(session.getRecipeId())) {
-                boolean alreadyCompleted = questIntegrationService.isQuestCompletedByUser(currentUser.getId(), session.getRecipeId());
+                boolean alreadyCompleted = questIntegrationService.isQuestCompletedByUser(currentUser.getId(),
+                        session.getRecipeId());
 
                 if (!alreadyCompleted) {
                     currentMultiplier = questIntegrationService.getQuestMultiplier(session.getRecipeId());
-                    questIntegrationService.markQuestCompleted(currentUser.getId(), session.getRecipeId(), session.getStartedAt());
+                    questIntegrationService.markQuestCompleted(currentUser.getId(), session.getRecipeId(),
+                            session.getStartedAt());
                 } else {
                     downgradeToReduced = true;
                 }
@@ -260,27 +287,32 @@ public class CookingService {
 
         } else if (session.getXpMode() == XpMode.REDUCED) {
             totalXpToAward = Math.max(1, basePoints / 10);
+        } else if (session.getXpMode() == XpMode.BATTLE) {
+            totalXpToAward = 0;
         }
 
         if (totalXpToAward > 0) {
-            profile.setXp(profile.getXp() + totalXpToAward);
-            profile.setRatingScore(profile.getRatingScore() + totalXpToAward);
-            profile.setBalance(profile.getBalance() + totalXpToAward);
-
-            // !!! Отут може бути проблема з незбереженням балів
+            profileService.awardCookingRewards(currentUser.getId(), totalXpToAward);
         }
+
+
+        eventPublisher.publishEvent(new CookingSessionCompletedEvent(session.getId(), currentUser.getId()));
+
+        return totalXpToAward;
     }
 
     private CookingSession getActiveSessionStrict(Long sessionId) {
         CookingSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Сесію не знайдено", HttpStatus.NOT_FOUND));
+                .orElseThrow(
+                        () -> new AppException(ErrorCode.INVALID_REQUEST, "Сесію не знайдено", HttpStatus.NOT_FOUND));
 
         User currentUser = getCurrentUser();
         boolean isOwner = session.getUser().getId().equals(currentUser.getId());
         boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
 
         if (!isOwner && !isAdmin) {
-            throw new AppException(ErrorCode.SECURITY_VIOLATION, "Відмовлено в доступі. Це не ваша сесія.", HttpStatus.FORBIDDEN);
+            throw new AppException(ErrorCode.SECURITY_VIOLATION, "Відмовлено в доступі. Це не ваша сесія.",
+                    HttpStatus.FORBIDDEN);
         }
 
         if (session.getStatus() != SessionStatus.IN_PROGRESS) {
@@ -319,8 +351,7 @@ public class CookingService {
                 default -> throw new AppException(
                         ErrorCode.INVALID_REQUEST,
                         "Непідтримувана мова: '" + requestLang + "'. Доступні варіанти: 'uk', 'en'.",
-                        HttpStatus.BAD_REQUEST
-                );
+                        HttpStatus.BAD_REQUEST);
             };
         }
         if (profile != null && profile.getLanguage() != null) {

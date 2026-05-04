@@ -42,6 +42,7 @@ public class RecipeService {
     private final RecipeRepository recipeRepository;
 
 
+    @Transactional
     public RecipeListResponse generateUserRecipes(GenerateRecipeRequest request) {
         CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User myUser = userDetails.getUser();
@@ -64,6 +65,7 @@ public class RecipeService {
     }
 
 
+    @Transactional
     public RecipeListResponse generateAdminRecipes(GenerateAdminRecipeRequest request) {
         String targetLanguage = resolveLanguage(request.requestLanguage(), null);
 
@@ -107,7 +109,8 @@ public class RecipeService {
         }
 
         if ((safeIngredients == null || safeIngredients.isEmpty()) && safeTextQuery == null && challengeCuisine == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Будь ласка, введіть запит, додайте інгредієнти або вкажіть кухню.", HttpStatus.BAD_REQUEST);
+            // allow empty query
+            safeTextQuery = "";
         }
 
         String messagesPayload = recipePromptBuilder.buildUnifiedRecipeMessages(

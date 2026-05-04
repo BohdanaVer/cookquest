@@ -9,5 +9,6 @@ public record StepVerificationResponse(
         String feedback,
         boolean bonusEligible,
         String sessionStatus,
-        int currentStepIndex
+        int currentStepIndex,
+        int earnedPointsForStep
 ) {}

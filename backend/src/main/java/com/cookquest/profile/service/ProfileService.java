@@ -47,7 +47,7 @@ public class ProfileService {
                         "Профіль користувача не знайдено",
                         HttpStatus.NOT_FOUND
                 ));
-        profile.setActiveMascot(request.activeMascot());
+        profile.setActiveMascotId(request.activeMascotId());
         profileRepository.save(profile);
     }
 
@@ -70,6 +70,50 @@ public class ProfileService {
         return mapToResponse(profileRepository.save(profile));
     }
 
+    @Transactional
+    public void awardCookingRewards(Long userId, int amount) {
+        UserProfile profile = profileRepository.findById(userId)
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.PROFILE_NOT_FOUND,
+                        "Профіль користувача не знайдено",
+                        HttpStatus.NOT_FOUND
+                ));
+
+        profile.setXp(profile.getXp() + amount);
+        profile.setRatingScore(profile.getRatingScore() + amount);
+        
+        checkLevelUp(profile);
+
+        profileRepository.save(profile);
+    }
+
+    @Transactional
+    public void awardBattleRewards(Long userId, int xpAmount, int coinsAmount) {
+        UserProfile profile = profileRepository.findById(userId)
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.PROFILE_NOT_FOUND,
+                        "Профіль користувача не знайдено",
+                        HttpStatus.NOT_FOUND
+                ));
+
+        profile.setXp(profile.getXp() + xpAmount);
+        profile.setRatingScore(profile.getRatingScore() + xpAmount);
+        profile.setBalance(profile.getBalance() + coinsAmount);
+
+        checkLevelUp(profile);
+
+        profileRepository.save(profile);
+    }
+
+    private void checkLevelUp(UserProfile profile) {
+        // Проста логіка збільшення рівня (наприклад, кожні 1000 XP - новий рівень)
+        // В майбутньому тут можна додати криву досвіду
+        int expectedLevel = 1 + (profile.getXp() / 1000);
+        if (expectedLevel > profile.getLevel()) {
+            profile.setLevel(expectedLevel);
+        }
+    }
+
     private UserProfileResponse mapToResponse(UserProfile p) {
         return new UserProfileResponse(
                 p.getId(),
@@ -79,7 +123,7 @@ public class ProfileService {
                 p.getBalance(),
                 p.getRatingScore(),
                 p.getLanguage(),
-                p.getActiveMascot(),
+                p.getActiveMascotId(),
                 p.getDietaryPreferences()
         );
     }
