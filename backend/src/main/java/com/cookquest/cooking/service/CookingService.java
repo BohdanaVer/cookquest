@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -88,12 +89,20 @@ public class CookingService {
         XpMode xpMode = cookingRewardService.determineMode(user.getId(), recipe);
 
         if (xpMode == XpMode.FULL && !isQuestActive && recipe.batchId() != null) {
-            usedBatchRepository.save(
-                    UsedBatch.builder()
-                            .user(user)
-                            .batchId(recipe.batchId())
-                            .usedAt(LocalDateTime.now())
-                            .build());
+            try {
+                usedBatchRepository.save(
+                        UsedBatch.builder()
+                                .user(user)
+                                .batchId(recipe.batchId())
+                                .usedAt(LocalDateTime.now())
+                                .build());
+            } catch (DataIntegrityViolationException e) {
+                log.warn("Батч {} вже використано юзером {}", recipe.batchId(), user.getId());
+                throw new AppException(
+                        ErrorCode.INVALID_REQUEST,
+                        "Ви вже почали готувати рецепт з цієї генерації",
+                        HttpStatus.BAD_REQUEST);
+            }
         }
 
         CookingSession session = CookingSession.builder()

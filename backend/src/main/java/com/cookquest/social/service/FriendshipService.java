@@ -94,7 +94,7 @@ public class FriendshipService {
         return friends.stream().map(f -> {
             Long friendId = f.getRequesterId().equals(currentUserId) ? f.getReceiverId() : f.getRequesterId();
             String username = profileSocialApi.getUsernameById(friendId);
-            return new FriendDto(f.getId(), friendId, username, f.getUpdatedAt());
+            return new FriendDto(f.getId(), username, f.getUpdatedAt());
         }).collect(Collectors.toList());
     }
 
@@ -105,7 +105,7 @@ public class FriendshipService {
 
         return requests.stream().map(f -> {
             String username = profileSocialApi.getUsernameById(f.getRequesterId());
-            return new FriendRequestDto(f.getId(), f.getRequesterId(), username, f.getCreatedAt());
+            return new FriendRequestDto(f.getId(), username, f.getCreatedAt());
         }).collect(Collectors.toList());
     }
 }

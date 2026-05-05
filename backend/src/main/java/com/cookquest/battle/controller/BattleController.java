@@ -5,9 +5,11 @@ import com.cookquest.battle.dto.CreateBattleRequest;
 import com.cookquest.battle.service.BattleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/v1/battles")
@@ -17,43 +19,37 @@ public class BattleController {
     private final BattleService battleService;
 
     @GetMapping("/active")
-    public List<BattleResponse> getActiveBattles() {
-        return battleService.getActiveBattles();
+    public ResponseEntity<List<BattleResponse>> getActiveBattles() {
+        return ResponseEntity.ok(battleService.getActiveBattles());
     }
 
     @GetMapping("/history")
-    public List<BattleResponse> getBattleHistory() {
-        return battleService.getBattleHistory();
+    public ResponseEntity<List<BattleResponse>> getBattleHistory() {
+        return ResponseEntity.ok(battleService.getBattleHistory());
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public BattleResponse createBattle(@RequestBody CreateBattleRequest request) {
-        return battleService.createBattle(request);
+    public ResponseEntity<BattleResponse> createBattle(@RequestBody CreateBattleRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(battleService.createBattle(request));
     }
 
     @PostMapping("/{battleId}/accept")
-    public BattleResponse acceptBattle(@PathVariable Long battleId) {
-        return battleService.acceptBattle(battleId);
+    public ResponseEntity<BattleResponse> acceptBattle(@PathVariable Long battleId) {
+        return ResponseEntity.ok(battleService.acceptBattle(battleId));
     }
 
     @PostMapping("/{battleId}/decline")
-    public BattleResponse declineBattle(@PathVariable Long battleId) {
-        return battleService.cancelParticipation(battleId);
+    public ResponseEntity<BattleResponse> declineBattle(@PathVariable Long battleId) {
+        return ResponseEntity.ok(battleService.cancelParticipation(battleId));
     }
 
     @GetMapping("/{battleId}")
-    public BattleResponse getBattleStatus(@PathVariable Long battleId) {
-        return battleService.getBattleStatus(battleId);
-    }
-
-    @PostMapping("/{battleId}/submit")
-    public BattleResponse submitDish(@PathVariable Long battleId) {
-        return battleService.submitParticipant(battleId);
+    public ResponseEntity<BattleResponse> getBattleStatus(@PathVariable Long battleId) {
+        return ResponseEntity.ok(battleService.getBattleStatus(battleId));
     }
 
     @PostMapping("/{battleId}/cancel")
-    public BattleResponse cancelParticipation(@PathVariable Long battleId) {
-        return battleService.cancelParticipation(battleId);
+    public ResponseEntity<BattleResponse> cancelParticipation(@PathVariable Long battleId) {
+        return ResponseEntity.ok(battleService.cancelParticipation(battleId));
     }
 }

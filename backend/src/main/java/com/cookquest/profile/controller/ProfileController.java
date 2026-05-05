@@ -9,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-// Припускаємо, що у тебе є клас CustomUserDetails, який повертає Long ID
 @RestController
 @RequestMapping("/api/v1/profiles")
 @RequiredArgsConstructor
@@ -21,7 +20,6 @@ public class ProfileController {
     public ResponseEntity<UserProfileResponse> getMyProfile(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        // Тепер це працює, бо CustomUserDetails має метод getId()
         return ResponseEntity.ok(profileService.getProfile(userDetails.getId()));
     }
 

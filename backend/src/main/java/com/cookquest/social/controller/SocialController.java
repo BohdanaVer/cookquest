@@ -1,10 +1,14 @@
 package com.cookquest.social.controller;
 
+import com.cookquest.social.dto.FriendDto;
+import com.cookquest.social.dto.FriendRequestDto;
+import com.cookquest.social.dto.SendFriendRequest;
 import com.cookquest.social.service.FriendshipService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -15,29 +19,30 @@ public class SocialController {
     private final FriendshipService friendshipService;
 
     @PostMapping("/request")
-    public ResponseEntity<?> sendRequest(@RequestBody Map<String, String> body) {
-        String targetUsername = body.get("targetUsername");
-        return ResponseEntity.ok(friendshipService.sendRequest(targetUsername));
+    public ResponseEntity<Void> sendRequest(@RequestBody SendFriendRequest request) {
+        friendshipService.sendRequest(request.targetUsername());
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{friendshipId}/accept")
-    public ResponseEntity<?> acceptRequest(@PathVariable Long friendshipId) {
-        return ResponseEntity.ok(friendshipService.acceptRequest(friendshipId));
+    public ResponseEntity<Void> acceptRequest(@PathVariable Long friendshipId) {
+        friendshipService.acceptRequest(friendshipId);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{friendshipId}/decline")
-    public ResponseEntity<?> declineRequest(@PathVariable Long friendshipId) {
+    public ResponseEntity<Void> declineRequest(@PathVariable Long friendshipId) {
         friendshipService.declineRequest(friendshipId);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping
-    public ResponseEntity<?> getFriends() {
+    public ResponseEntity<List<FriendDto>> getFriends() {
         return ResponseEntity.ok(friendshipService.getFriendsList());
     }
 
     @GetMapping("/requests")
-    public ResponseEntity<?> getRequests() {
+    public ResponseEntity<List<FriendRequestDto>> getRequests() {
         return ResponseEntity.ok(friendshipService.getPendingRequests());
     }
 }
