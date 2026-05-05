@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Clock, Check, Camera, Loader2 } from 'lucide-react'
+import { ArrowLeft, Check, Camera, Loader2 } from 'lucide-react' // Видалив Clock з імпортів
 import { toast } from 'sonner'
 import { cn } from '../lib/utils'
 import { useTranslation } from 'react-i18next'
@@ -79,7 +79,6 @@ export default function Cook() {
         startSession();
     }, [id, navigate, t]);
 
-
     const verifyStepOnBackend = async (stepIndex: number, file: File) => {
         if (!session) return false;
         setIsVerifying(true);
@@ -112,18 +111,10 @@ export default function Cook() {
         toast.success(t('cook.stepDone', 'Крок {{n}} виконано!', { n: stepIndex + 1 }));
     };
 
-    const handleStepAction = async (stepIndex: number) => {
-        if (!session || !recipe || isVerifying) return;
-
-        const isLastStep = stepIndex === recipe.steps.length - 1;
-        const needsPhoto = session.xpMode === 'FULL' || (session.xpMode === 'REDUCED' && isLastStep);
-
-        if (needsPhoto) {
-            setPendingPhotoStepIndex(stepIndex);
-            fileInputRef.current?.click();
-        } else {
-            completeStepLocally(stepIndex);
-        }
+    const handleTakePhoto = (stepIndex: number) => {
+        if (isVerifying) return;
+        setPendingPhotoStepIndex(stepIndex);
+        fileInputRef.current?.click();
     };
 
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,6 +135,23 @@ export default function Cook() {
         navigate(-1);
     };
 
+    // --- НОВА ЛОГІКА СКАСУВАННЯ ГОТУВАННЯ ---
+    const handleCancelCooking = async () => {
+        const isConfirmed = window.confirm(t('cook.confirmCancel', 'Ви впевнені, що хочете скасувати готування? Прогрес не збережеться.'));
+
+        if (isConfirmed) {
+            if (session) {
+                try {
+                    await api.post(`/api/v1/cooking/${session.sessionId}/cancel`);
+                    toast.info(t('cook.cancelled', 'Готування скасовано.'));
+                } catch (error) {
+                    console.error("Failed to cancel cooking session:", error);
+                    // Навіть якщо бекенд відповів помилкою, ми все одно випускаємо користувача
+                }
+            }
+            navigate(-1);
+        }
+    };
 
     if (loading || !recipe || !session) {
         return <div className="flex justify-center items-center min-h-[50vh] text-gray-500 animate-pulse">
@@ -158,17 +166,16 @@ export default function Cook() {
     return (
         <div className="relative min-h-screen pb-32 animate-in fade-in duration-500">
 
-            <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-                <ArrowLeft size={20} /> {t('cook.finishSession', 'Завершити готування')}
+            {/* Замінили звичайний onClick={() => navigate(-1)} на виклик функції скасування */}
+            <button onClick={handleCancelCooking} className="mb-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                <ArrowLeft size={20} /> {t('cook.cancelSession', 'Відмінити готування')}
             </button>
 
             <div className="bg-[#2a1a1a] rounded-3xl p-6 mb-6 shadow-xl border border-orange-500/10">
                 <h1 className="font-extrabold text-white text-2xl leading-tight mb-4">{recipe.name}</h1>
 
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-1.5 text-orange-400 font-bold">
-                        <Clock size={16} /> {recipe.cookingTimeMinutes} {t('cook.minutes', 'хв')}
-                    </div>
+                {/* Видалили блок з годинником, залишили тільки XP з вирівнюванням по правому краю */}
+                <div className="flex items-center justify-end mb-6">
                     <span className="text-orange-500 font-extrabold text-sm">
                         +{recipe.points} XP
                     </span>
@@ -202,8 +209,8 @@ export default function Cook() {
                     const isAccessible = index <= completedSteps;
                     const isCompleted = index < completedSteps;
                     const isLastStep = index === totalSteps - 1;
-                    const requiresPhoto = session.xpMode === 'FULL' || (session.xpMode === 'REDUCED' && isLastStep);
 
+                    const canTakeOptionalPhoto = session.xpMode === 'FULL' || (session.xpMode === 'REDUCED' && isLastStep);
                     const isThisStepVerifying = isVerifying && (index === pendingPhotoStepIndex);
 
                     return (
@@ -230,33 +237,38 @@ export default function Cook() {
                                     <h3 className={cn("font-bold text-lg mb-2 leading-tight", isCompleted ? "text-gray-400 line-through" : "text-white")}>
                                         {step.checkpointLabel || `${t('cook.step', 'Крок')} ${index + 1}`}
                                     </h3>
-                                    <p className={cn("text-sm leading-relaxed mb-4", isCompleted ? "text-gray-500" : "text-gray-400")}>
+                                    <p className={cn("text-sm leading-relaxed mb-3", isCompleted ? "text-gray-500" : "text-gray-400")}>
                                         {step.text}
                                     </p>
 
                                     {!isCompleted && isAccessible && (
-                                        <button
-                                            onClick={() => handleStepAction(index)}
-                                            disabled={isVerifying}
-                                            className={cn(
-                                                "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all active:scale-95 disabled:opacity-50",
-                                                requiresPhoto
-                                                    ? "bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/20"
-                                                    : "bg-orange-500/20 hover:bg-orange-500/30 text-orange-500"
+                                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                                            <button
+                                                onClick={() => completeStepLocally(index)}
+                                                disabled={isVerifying}
+                                                className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 disabled:opacity-50 bg-orange-500/20 hover:bg-orange-500/30 text-orange-500"
+                                            >
+                                                <Check size={16} /> {t('cook.done', 'Done')}
+                                            </button>
+
+                                            {canTakeOptionalPhoto && (
+                                                <button
+                                                    onClick={() => handleTakePhoto(index)}
+                                                    disabled={isVerifying}
+                                                    className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 disabled:opacity-50 bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/20"
+                                                >
+                                                    {isThisStepVerifying ? (
+                                                        <><Loader2 size={16} className="animate-spin" /> {t('cook.verifying', 'Перевірка...')}</>
+                                                    ) : (
+                                                        <><Camera size={16} /> {t('cook.takePhotoXp', 'Take photo +XP')}</>
+                                                    )}
+                                                </button>
                                             )}
-                                        >
-                                            {isThisStepVerifying ? (
-                                                <><Loader2 size={16} className="animate-spin" /> {t('cook.verifying', 'Перевірка...')}</>
-                                            ) : requiresPhoto ? (
-                                                <><Camera size={16} /> {isLastStep ? t('cook.dishPhoto', 'Dish photo') : t('cook.takePhoto', 'Take photo')}</>
-                                            ) : (
-                                                <><Check size={16} /> {t('cook.done', 'Done')}</>
-                                            )}
-                                        </button>
+                                        </div>
                                     )}
 
                                     {isCompleted && (
-                                        <div className="flex items-center gap-1.5 text-green-500 text-sm font-bold">
+                                        <div className="flex items-center gap-1.5 text-green-500 text-sm font-bold mt-1">
                                             <Check size={16} /> {t('cook.completed', 'Completed')}
                                         </div>
                                     )}
