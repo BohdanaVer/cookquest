@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Check, Camera, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '../lib/utils'
@@ -30,11 +30,13 @@ interface CookingSessionDto {
     startedAt: string;
     batchId: string;
     xpMode: 'FULL' | 'REDUCED' | 'NONE';
+    completedSteps?: number;
 }
 
 export default function Cook() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
+    const location = useLocation()
     const { t, i18n } = useTranslation()
 
     const [recipe, setRecipe] = useState<Recipe | null>(null)
@@ -48,27 +50,54 @@ export default function Cook() {
 
     const hasStartedRef = useRef(false)
 
+    const isResumeMode = new URLSearchParams(location.search).get('mode') === 'resume'
+
     useEffect(() => {
         if (!id || hasStartedRef.current) return;
         hasStartedRef.current = true;
 
-        const startSession = async () => {
+        const initSession = async () => {
             try {
-                const response = await api.post('/api/v1/cooking/start', { recipeId: id });
-                const sessionData: CookingSessionDto = response.data;
-                setSession(sessionData);
+                if (isResumeMode) {
+                    const activeResp = await api.get('/api/v1/cooking/active');
+                    const activeSessions: CookingSessionDto[] = activeResp.data;
+                    const existingSession = activeSessions.find(s => s.sessionId.toString() === id);
 
-                let parsedRecipe: Recipe;
-                if (typeof sessionData.recipe === 'string') {
-                    parsedRecipe = JSON.parse(sessionData.recipe) as Recipe;
+                    if (!existingSession) {
+                        toast.error('Активну сесію не знайдено');
+                        navigate('/');
+                        return;
+                    }
+
+                    setSession(existingSession);
+
+                    let parsedRecipe: Recipe;
+                    if (typeof existingSession.recipe === 'string') {
+                        parsedRecipe = JSON.parse(existingSession.recipe) as Recipe;
+                    } else {
+                        parsedRecipe = existingSession.recipe as unknown as Recipe;
+                    }
+                    setRecipe(parsedRecipe);
+
+                    setCompletedSteps(existingSession.completedSteps || 0);
+
                 } else {
-                    parsedRecipe = sessionData.recipe as unknown as Recipe;
+                    const response = await api.post('/api/v1/cooking/start', { recipeId: id });
+                    const sessionData: CookingSessionDto = response.data;
+                    setSession(sessionData);
+
+                    let parsedRecipe: Recipe;
+                    if (typeof sessionData.recipe === 'string') {
+                        parsedRecipe = JSON.parse(sessionData.recipe) as Recipe;
+                    } else {
+                        parsedRecipe = sessionData.recipe as unknown as Recipe;
+                    }
+                    setRecipe(parsedRecipe);
                 }
-                setRecipe(parsedRecipe);
 
             } catch (error) {
-                console.error("Failed to start cooking session:", error);
-                toast.error(t('cook.startError', 'Не вдалося почати готування. Спробуйте ще раз.'));
+                console.error("Помилка ініціалізації сесії:", error);
+                toast.error(t('cook.startError', 'Не вдалося завантажити сесію.'));
                 hasStartedRef.current = false;
                 navigate(-1);
             } finally {
@@ -76,8 +105,8 @@ export default function Cook() {
             }
         };
 
-        startSession();
-    }, [id, navigate, t]);
+        initSession();
+    }, [id, isResumeMode, navigate, t]);
 
     const verifyStepOnBackend = async (stepIndex: number, file: File) => {
         if (!session) return false;

@@ -67,7 +67,10 @@ export default function Home() {
     if (!recipeData) return { id: '', name: 'Невідомий рецепт' };
     try {
       const parsed = typeof recipeData === 'string' ? JSON.parse(recipeData) : recipeData;
-      return { id: parsed.id, name: parsed.name || 'Невідомий рецепт' };
+
+      const realId = parsed.id || parsed.recipeId || parsed.recipe_id || '';
+
+      return { id: realId, name: parsed.name || 'Невідомий рецепт' };
     } catch (e) {
       return { id: '', name: 'Невідомий рецепт' };
     }
@@ -184,7 +187,7 @@ export default function Home() {
                           </div>
                         </div>
                         <Link
-                            to={`/cook/${recipe.id}`}
+                            to={`/cook/${session.sessionId}?mode=resume`}
                             className="shrink-0 bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 text-xs font-bold px-4 py-2 rounded-xl transition-colors"
                         >
                           {t('home.continue', 'Продовжити')}
