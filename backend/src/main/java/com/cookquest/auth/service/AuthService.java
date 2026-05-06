@@ -15,7 +15,9 @@ import com.cookquest.mascot.entity.UserMascot;
 import com.cookquest.mascot.repository.MascotRepository;
 import com.cookquest.mascot.repository.UserMascotRepository;
 import com.cookquest.profile.entity.Language;
+import com.cookquest.profile.entity.Level;
 import com.cookquest.profile.entity.UserProfile;
+import com.cookquest.profile.repository.LevelRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,8 +42,8 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final MascotRepository mascotRepository;
     private final UserMascotRepository userMascotRepository;
+    private final LevelRepository levelRepository;
 
-    private static final Long STARTER_MASCOT_ID = 1L;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -61,6 +63,22 @@ public class AuthService {
             );
         }
 
+        // 1. Дістаємо 1-й рівень з БД
+        Level defaultLevel = levelRepository.findByLevelNumber(1)
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.INTERNAL_ERROR,
+                        "Критична помилка: Базовий рівень (1) не знайдено в БД",
+                        HttpStatus.INTERNAL_SERVER_ERROR
+                ));
+
+        // 2. Дістаємо стартового маскота за його унікальним ключем
+        Mascot starterMascot = mascotRepository.findByName("MASCOT_BROCCOLI")
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.INTERNAL_ERROR,
+                        "Критична помилка: Стартовий маскот не знайдений у БД",
+                        HttpStatus.INTERNAL_SERVER_ERROR
+                ));
+
         User user = User.builder()
                 .username(request.username())
                 .email(request.email())
@@ -68,32 +86,30 @@ public class AuthService {
                 .role(Role.USER)
                 .build();
 
+        // 3. Збираємо профіль з правильними сутностями
         UserProfile profile = UserProfile.builder()
                 .user(user)
                 .xp(0)
-                .level(1)
+                .level(defaultLevel) // Передаємо сутність Level, а не просто цифру 1
                 .balance(0)
                 .ratingScore(0)
                 .language(Language.UK)
-                .activeMascotId(STARTER_MASCOT_ID)
+                .activeMascotId(starterMascot.getId()) // Беремо ID знайденого Броколі
                 .build();
 
         user.setProfile(profile);
-
         userRepository.save(user);
 
-        // Видаємо стартового маскота новому юзеру
-        mascotRepository.findById(STARTER_MASCOT_ID).ifPresent(starterMascot -> {
-            UserMascot userMascot = UserMascot.builder()
-                    .userId(user.getId())
-                    .mascot(starterMascot)
-                    .acquiredAt(LocalDateTime.now())
-                    .build();
-            userMascotRepository.save(userMascot);
-        });
+        // 4. Додаємо стартового маскота в інвентар юзера
+        UserMascot userMascot = UserMascot.builder()
+                .userId(user.getId())
+                .mascot(starterMascot)
+                .acquiredAt(LocalDateTime.now())
+                .build();
+
+        userMascotRepository.save(userMascot);
 
         CustomUserDetails userDetails = new CustomUserDetails(user);
-
         String jwtToken = jwtService.generateToken(userDetails);
 
         return buildResponse(user, jwtToken);
@@ -108,7 +124,6 @@ public class AuthService {
                     )
             );
 
-            // 1. ТЕПЕР МИ ПЕРЕВІРЯЄМО НА CustomUserDetails
             if (!(authentication.getPrincipal() instanceof CustomUserDetails userDetails)) {
                 throw new AppException(
                         ErrorCode.USER_NOT_FOUND,
@@ -117,10 +132,8 @@ public class AuthService {
                 );
             }
 
-            // 2. Дістаємо нашого юзера для відповіді
             User user = userDetails.getUser();
 
-            // 3. Генеруємо токен
             String jwtToken = jwtService.generateToken(userDetails);
 
             return buildResponse(user, jwtToken);

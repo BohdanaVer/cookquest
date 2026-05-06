@@ -24,12 +24,11 @@ public class StabilityApiClient {
     private static final String GENERATE_URL = "https://api.stability.ai/v2beta/stable-image/generate/core";
     private static final String REMOVE_BG_URL = "https://api.stability.ai/v2beta/stable-image/edit/remove-background";
 
-    // Крок 1: Генерація
     public byte[] generateImage(String prompt, String negativePrompt, String stylePreset) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         headers.setBearerAuth(apiKey);
-        headers.set("Accept", "application/json"); // Просимо повернути JSON з Base64
+        headers.set("Accept", "application/json");
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("prompt", prompt);
@@ -49,7 +48,6 @@ public class StabilityApiClient {
         }
     }
 
-    // Крок 2: Видалення фону
     public byte[] removeBackground(byte[] imageBytes) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
@@ -59,7 +57,6 @@ public class StabilityApiClient {
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("output_format", "png");
 
-        // Перетворюємо байти у "файл" для відправки
         ByteArrayResource imageResource = new ByteArrayResource(imageBytes) {
             @Override
             public String getFilename() { return "mascot.png"; }
@@ -75,7 +72,7 @@ public class StabilityApiClient {
             return Base64.getDecoder().decode(base64Image);
         } catch (Exception e) {
             System.err.println("Remove Background failed, returning original image: " + e.getMessage());
-            return imageBytes; // Якщо впало - повертаємо оригінал, як у JS
+            return imageBytes;
         }
     }
 }

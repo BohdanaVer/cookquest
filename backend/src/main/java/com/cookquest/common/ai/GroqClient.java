@@ -158,4 +158,51 @@ public class GroqClient {
             );
         }
     }
+
+    /**
+     * Перекладає текст на англійську для стабільної генерації зображень.
+     * Якщо текст порожній, або API недоступне, безпечно повертає оригінальний текст.
+     */
+    public String translateToEnglish(String text) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+
+        try {
+            ArrayNode messagesArray = objectMapper.createArrayNode();
+
+            // Системний промпт: жорстко вимагаємо лише переклад
+            ObjectNode systemMessage = objectMapper.createObjectNode();
+            systemMessage.put("role", "system");
+            systemMessage.put("content",
+                    "You are an expert prompt engineer for an AI mascot generator. " +
+                            "Translate the user's Ukrainian text into English. " +
+                            "CRITICAL RULES: " +
+                            "1. Extract ONLY physical attributes, clothing, accessories, emotions, and held items. " +
+                            "2. COMPLETELY REMOVE any mentions of backgrounds, rooms, furniture, environments, or spatial actions (e.g., 'sitting at a table', 'flying in space', 'in a kitchen'). " +
+                            "3. If the user mentions interacting with a large object, convert it to holding a small version (e.g., 'playing on computer' -> 'holding a laptop'). " +
+                            "Respond ONLY with the final sanitized English phrase. No explanations."
+            );
+            messagesArray.add(systemMessage);
+
+            ObjectNode userMessage = objectMapper.createObjectNode();
+            userMessage.put("role", "user");
+            userMessage.put("content", text);
+            messagesArray.add(userMessage);
+
+            // Викликаємо executeWithRetry:
+            String translated = executeWithRetry(textModel, messagesArray, 150, 0.1, false);
+
+            String cleanTranslation = translated.trim();
+
+            // ДОДАНО ЛОГУВАННЯ: Виводимо результат перекладу в консоль
+            log.info("Groq переклад: [{}] -> [{}]", text, cleanTranslation);
+
+            return cleanTranslation;
+
+        } catch (Exception e) {
+            log.warn("Не вдалося перекласти текст [{}]. Використовуємо оригінал. Причина: {}", text, e.getMessage());
+            return text;
+        }
+    }
 }

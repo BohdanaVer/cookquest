@@ -26,7 +26,11 @@ public class UserProfile {
     private User user;
 
     private int xp;
-    private int level;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "level_id")
+    private Level level;
+
     private int balance;
     private int ratingScore;
 

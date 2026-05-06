@@ -34,8 +34,12 @@ public class Mascot {
     private String imageUrlSad;
 
     @Column(nullable = false)
-    private Integer price; // 0 для стартових
+    private Integer price;
 
     @Column(name = "creator_id")
-    private Long creatorId; // Null, якщо це базовий маскот
+    private Long creatorId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MascotRarity rarity;
 }

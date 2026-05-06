@@ -21,7 +21,6 @@ public class CustomUserDetails implements UserDetails {
         return user;
     }
 
-    // Додаємо цей метод, щоб діставати ID в контролерах
     public Long getId() {
         return user.getId();
     }
@@ -38,7 +37,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return user.getEmail(); // Використовуємо email як логін
+        return user.getEmail();
     }
 
     @Override public boolean isAccountNonExpired() { return true; }

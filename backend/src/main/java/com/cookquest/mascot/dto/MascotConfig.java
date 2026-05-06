@@ -1,11 +1,11 @@
 package com.cookquest.mascot.dto;
 
 public record MascotConfig(
+        String name,
         String type,
+        String subject,
         String style,
         String personality,
         String color,
-        String subjectName,
-        String extraDetails,
-        String emotion
+        String extraDetails
 ) {}

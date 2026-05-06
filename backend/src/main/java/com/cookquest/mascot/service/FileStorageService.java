@@ -1,48 +1,33 @@
 package com.cookquest.mascot.service;
 
-import com.cookquest.common.exception.AppException;
-import com.cookquest.common.exception.ErrorCode;
-import org.springframework.http.HttpStatus;
+import com.cloudinary.Cloudinary;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Base64;
-import java.util.UUID;
+import java.util.HashMap;
+import java.util.Map;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class FileStorageService {
 
-    private final String UPLOAD_DIR = "uploads/";
+    private final Cloudinary cloudinary;
 
-    public FileStorageService() {
-        try {
-            Path uploadPath = Paths.get(UPLOAD_DIR);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Could not create upload directory!", e);
-        }
-    }
+    public String saveImageToCloud(byte[] imageBytes, String folder, String fileName) throws IOException {
+        Map<String, Object> params = new HashMap<>();
 
-    public String saveBase64Image(String base64Image) {
-        try {
-            // Remove the data url prefix if it exists
-            String base64Data = base64Image.replaceFirst("^data:image/[^;]+;base64,", "");
-            byte[] imageBytes = Base64.getDecoder().decode(base64Data);
+        params.put("folder", folder);
 
-            String fileName = "mascot_" + UUID.randomUUID() + ".png";
-            Path filePath = Paths.get(UPLOAD_DIR, fileName);
+        params.put("public_id", fileName);
 
-            Files.write(filePath, imageBytes);
+        Map uploadResult = cloudinary.uploader().upload(imageBytes, params);
 
-            return "/uploads/" + fileName; // Return relative URL
-        } catch (Exception e) {
-            throw new AppException(ErrorCode.INTERNAL_ERROR, "Помилка збереження файлу", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        String secureUrl = uploadResult.get("secure_url").toString();
+        log.info("Файл успішно завантажено в Cloudinary: {}", secureUrl);
+
+        return secureUrl;
     }
 }
