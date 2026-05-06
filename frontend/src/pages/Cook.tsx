@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Check, Camera, Loader2 } from 'lucide-react' // Видалив Clock з імпортів
+import { ArrowLeft, Check, Camera, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '../lib/utils'
 import { useTranslation } from 'react-i18next'
@@ -135,7 +135,6 @@ export default function Cook() {
         navigate(-1);
     };
 
-    // --- НОВА ЛОГІКА СКАСУВАННЯ ГОТУВАННЯ ---
     const handleCancelCooking = async () => {
         const isConfirmed = window.confirm(t('cook.confirmCancel', 'Ви впевнені, що хочете скасувати готування? Прогрес не збережеться.'));
 
@@ -146,7 +145,6 @@ export default function Cook() {
                     toast.info(t('cook.cancelled', 'Готування скасовано.'));
                 } catch (error) {
                     console.error("Failed to cancel cooking session:", error);
-                    // Навіть якщо бекенд відповів помилкою, ми все одно випускаємо користувача
                 }
             }
             navigate(-1);
@@ -166,7 +164,6 @@ export default function Cook() {
     return (
         <div className="relative min-h-screen pb-32 animate-in fade-in duration-500">
 
-            {/* Замінили звичайний onClick={() => navigate(-1)} на виклик функції скасування */}
             <button onClick={handleCancelCooking} className="mb-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
                 <ArrowLeft size={20} /> {t('cook.cancelSession', 'Відмінити готування')}
             </button>
@@ -174,7 +171,6 @@ export default function Cook() {
             <div className="bg-[#2a1a1a] rounded-3xl p-6 mb-6 shadow-xl border border-orange-500/10">
                 <h1 className="font-extrabold text-white text-2xl leading-tight mb-4">{recipe.name}</h1>
 
-                {/* Видалили блок з годинником, залишили тільки XP з вирівнюванням по правому краю */}
                 <div className="flex items-center justify-end mb-6">
                     <span className="text-orange-500 font-extrabold text-sm">
                         +{recipe.points} XP

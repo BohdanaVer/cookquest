@@ -1,6 +1,6 @@
 package com.cookquest.quest.dto;
 
-public record QuestRequestDTO(
+public record QuestRequestDto(
         String recipeId,
         Long dayId,
         Double xpMultiplier,

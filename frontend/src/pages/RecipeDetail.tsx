@@ -1,31 +1,21 @@
 'use client'
 
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Bookmark, ChevronDown, ChevronUp, Swords, ChefHat, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '../lib/utils'
 import { useTranslation } from 'react-i18next'
 import { api } from '../api/axiosClient'
-import {useEffect, useState} from "react";
-
-export interface Recipe {
-    id: string;
-    name: string;
-    description: string;
-    difficulty: string;
-    points: number;
-    cookingTimeMinutes: number;
-    cuisine: string;
-    dietaryTags: string[];
-    ingredients: Array<{ name: string; amount: string; unit: string }>;
-    steps: Array<{ text: string; isCheckpoint: boolean; checkpointLabel: string | null }>;
-    stepCount: number;
-}
+import type { Recipe } from './Generate'
+import { useEffect, useState } from "react";
 
 export default function RecipeDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { t } = useTranslation()
+
+    const [searchParams] = useSearchParams()
+    const isQuest = searchParams.get('quest') === 'true'
 
     const [recipe, setRecipe] = useState<Recipe | null>(null)
     const [isIngredientsExpanded, setIsIngredientsExpanded] = useState(true)
@@ -54,7 +44,7 @@ export default function RecipeDetail() {
                 setRecipe(res.data);
             } catch (err) {
                 console.error(err);
-                toast.error("Рецепт не знайдено.");
+                toast.error(t('recipe.notFound', 'Рецепт не знайдено.'));
                 navigate(-1);
             }
         };
@@ -62,7 +52,7 @@ export default function RecipeDetail() {
         if (id) {
             fetchRecipe();
         }
-    }, [id, navigate])
+    }, [id, navigate, t])
 
     const toggleBookmark = async () => {
         if (!recipe || isSaving) return;
@@ -90,7 +80,9 @@ export default function RecipeDetail() {
     }
 
     if (!recipe) {
-        return <div className="flex justify-center items-center min-h-[50vh] text-gray-500 animate-pulse">Завантаження...</div>
+        return <div className="flex justify-center items-center min-h-[50vh] text-gray-500 animate-pulse">
+            {t('common.loading', 'Завантаження...')}
+        </div>
     }
 
     const difficultyColor = recipe.difficulty.toLowerCase() === 'easy' ? 'bg-green-500/20 text-green-400' :
@@ -134,7 +126,12 @@ export default function RecipeDetail() {
                     <span className="text-orange-500 font-extrabold text-sm">
                         +{recipe.points} XP
                     </span>
-                    {recipe.cuisine && (
+                    {isQuest && (
+                        <span className="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase">
+                            {t('recipe.questTask', 'Квестове завдання')}
+                        </span>
+                    )}
+                    {recipe.cuisine && !isQuest && (
                         <span className="text-gray-500 text-sm font-medium">
                             {recipe.cuisine}
                         </span>
@@ -147,7 +144,7 @@ export default function RecipeDetail() {
                         className="flex items-center gap-1 text-orange-500 text-sm font-medium transition-colors hover:text-orange-400"
                     >
                         {isIngredientsExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                        Ingredients ({recipe.ingredients.length})
+                        {t('recipe.ingredientsCount', 'Інгредієнти ({{count}})', { count: recipe.ingredients.length })}
                     </button>
 
                     {isIngredientsExpanded && (
@@ -163,21 +160,30 @@ export default function RecipeDetail() {
                 </div>
             </div>
 
-            <div className="fixed bottom-[80px] left-0 right-0 p-4 bg-gradient-to-t from-[#0f0f1a] via-[#0f0f1a]/95 to-transparent z-10 pointer-events-none">
+            <div className="fixed bottom-[80px] left-0 right-0 p-4 z-10 pointer-events-none">
                 <div className="max-w-md mx-auto grid grid-cols-2 gap-3 pointer-events-auto">
                     <button
                         onClick={() => navigate(`/cook/${recipe.id}`)}
                         className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all active:scale-95"
                     >
-                        <ChefHat size={18} /> Cook
+                        <ChefHat size={18} /> {t('recipe.cookBtn', 'Cook')}
                     </button>
 
-                    <button
-                        onClick={() => toast.info("Режим Батлу ще в розробці!")}
-                        className="flex items-center justify-center gap-2 bg-[#ff3366] hover:bg-[#ff3366]/90 text-white font-bold py-4 rounded-2xl shadow-lg shadow-[#ff3366]/20 transition-all active:scale-95"
-                    >
-                        <Swords size={18} /> Battle
-                    </button>
+                    {isQuest ? (
+                        <button
+                            onClick={() => toast.error(t('recipe.battleDisabledInQuest', 'Батли недоступні для квестових рецептів!'))}
+                            className="flex items-center justify-center gap-2 bg-[#2a2a3e] text-gray-500 font-bold py-4 rounded-2xl transition-all cursor-not-allowed shadow-lg border border-white/5"
+                        >
+                            <Swords size={18} /> {t('recipe.battleBtn', 'Battle')}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => toast.info(t('recipe.battleInDev', 'Режим Батлу ще в розробці!'))}
+                            className="flex items-center justify-center gap-2 bg-[#ff3366] hover:bg-[#ff3366]/90 text-white font-bold py-4 rounded-2xl shadow-lg shadow-[#ff3366]/20 transition-all active:scale-95"
+                        >
+                            <Swords size={18} /> {t('recipe.battleBtn', 'Battle')}
+                        </button>
+                    )}
                 </div>
             </div>
 

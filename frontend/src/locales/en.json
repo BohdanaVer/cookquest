@@ -194,5 +194,45 @@
     "successDelete": "Quest deleted",
     "errorDelete": "Error deleting quest",
     "errorFetch": "Error loading quests"
+  },
+  "common": {
+    "loading": "Loading...",
+    "back": "Back",
+    "collapse": "Collapse",
+    "expand": "Show more"
+  },
+  "difficulty": {
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard"
+  },
+  "cook": {
+    "startError": "Failed to start cooking session. Please try again.",
+    "verifyError": "Verification error. Please try again.",
+    "stepDone": "Step {{n}} completed!",
+    "success": "Cooking finished! Congratulations!",
+    "confirmCancel": "Are you sure you want to cancel cooking? Progress will not be saved.",
+    "cancelled": "Cooking cancelled.",
+    "preparing": "Preparing the kitchen...",
+    "cancelSession": "Cancel cooking",
+    "progress": "Progress",
+    "step": "Step",
+    "done": "Done",
+    "verifying": "Verifying...",
+    "takePhotoXp": "Take photo +XP",
+    "completed": "Completed",
+    "dishReady": "Dish is ready!"
+  },
+  "recipe": {
+    "notFound": "Recipe not found.",
+    "saved": "Recipe saved!",
+    "unsaved": "Recipe removed from saved.",
+    "saveError": "Error updating saved recipes.",
+    "questTask": "Quest task",
+    "ingredientsCount": "Ingredients ({{count}})",
+    "cookBtn": "Cook",
+    "battleBtn": "Battle",
+    "battleDisabledInQuest": "Battles are disabled for quest recipes!",
+    "battleInDev": "Battle mode is still in development!"
   }
 }

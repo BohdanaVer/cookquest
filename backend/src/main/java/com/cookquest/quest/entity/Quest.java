@@ -29,9 +29,13 @@ public class Quest {
     @Builder.Default
     private Double xpMultiplier = 1.0;
 
-
     @Column(name = "cuisine_name")
     private String cuisineName;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    @Builder.Default
+    private QuestStatus status = QuestStatus.AVAILABLE;
 
     public Long getDayId() {
         return day != null ? day.getId() : null;
