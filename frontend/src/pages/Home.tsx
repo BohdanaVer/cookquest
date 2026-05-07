@@ -258,8 +258,8 @@ export default function Home() {
               <Trophy className="text-yellow-400" size={20} />
             </div>
             <div className="flex-1">
-              <p className="font-bold text-white text-sm">{t('home.leaderboard')}</p>
-              <p className="text-xs text-gray-500">{t('home.yourRating', { score: ratingScore })}</p>
+              <p className="font-bold text-white text-sm">{t('home.leaderboard', 'Рейтингова дошка')}</p>
+              <p className="text-xs text-gray-500">{t('home.yourRating', 'Ваш рейтинг: {{score}}', { score: ratingScore })}</p>
             </div>
             <span className="text-xs text-yellow-400 font-bold">→</span>
           </div>

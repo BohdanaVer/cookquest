@@ -26,7 +26,6 @@ export interface Recipe {
     stepCount: number;
 }
 
-
 export default function Generate() {
     const { t, i18n } = useTranslation()
     const navigate = useNavigate()
@@ -59,7 +58,6 @@ export default function Generate() {
         sessionStorage.setItem('gen_recipes', JSON.stringify(recipes))
     }, [mode, step, prompt, ingredients, excluded, recipes])
 
-
     const handleBack = () => {
         if (step === 'recipes') {
             setRecipes([]);
@@ -70,7 +68,6 @@ export default function Generate() {
             setStep('input');
         }
     }
-
 
     const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -87,9 +84,8 @@ export default function Generate() {
         setPhotoUrls(prev => prev.filter((_, index) => index !== indexToRemove))
     }
 
-
     const analyzePhotos = async () => {
-        if (photos.length === 0) return toast.error("Додайте хоча б одне фото")
+        if (photos.length === 0) return toast.error(t('generate.addPhotoError', "Додайте хоча б одне фото"))
 
         setLoading(true)
         try {
@@ -111,11 +107,11 @@ export default function Generate() {
                 setStep('ingredients');
                 toast.success(t('generate.foundIngredients', 'Інгредієнти розпізнано!'));
             } else {
-                toast.error("Не вдалося розпізнати інгредієнти");
+                toast.error(t('generate.recognizeError', "Не вдалося розпізнати інгредієнти"));
             }
         } catch (error) {
             console.error("Помилка розпізнавання:", error);
-            toast.error("Сталася помилка при аналізі фото");
+            toast.error(t('generate.analyzeError', "Сталася помилка при аналізі фото"));
         } finally {
             setLoading(false);
         }
@@ -125,10 +121,10 @@ export default function Generate() {
         const activeIngredients = ingredients.filter(ing => !excluded.has(ing));
 
         if (mode === 'random' && !prompt.trim()) {
-            return toast.warning("Введіть запит для генерації");
+            return toast.warning(t('generate.emptyPromptWarn', "Введіть запит для генерації"));
         }
         if (mode === 'photo' && activeIngredients.length === 0) {
-            return toast.warning("Немає активних інгредієнтів для рецепту");
+            return toast.warning(t('generate.emptyIngredientsWarn', "Немає активних інгредієнтів для рецепту"));
         }
 
         setLoading(true)
@@ -147,13 +143,13 @@ export default function Generate() {
             if (response.data.recipes && response.data.recipes.length > 0) {
                 setRecipes(response.data.recipes);
                 setStep('recipes');
-                toast.success("Рецепти готові!");
+                toast.success(t('generate.recipesReady', "Рецепти готові!"));
             } else {
-                toast.error("Не вдалося згенерувати рецепти");
+                toast.error(t('generate.generateError', "Не вдалося згенерувати рецепти"));
             }
         } catch (error) {
             console.error("Помилка генерації:", error);
-            toast.error("Не вдалося згенерувати рецепти. Спробуйте ще раз.");
+            toast.error(t('generate.generateErrorFallback', "Не вдалося згенерувати рецепти. Спробуйте ще раз."));
         } finally {
             setLoading(false);
         }
@@ -164,11 +160,9 @@ export default function Generate() {
         navigate(`/recipe/${recipe.id}`);
     }
 
-
     if (step === 'recipes') {
         return (
             <div className="space-y-4 animate-slide-up pb-20">
-                {/* КНОПКА НАЗАД */}
                 <button onClick={handleBack} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
                     <ArrowLeft size={20} /> {t('common.back', 'Назад')}
                 </button>
@@ -210,7 +204,7 @@ export default function Generate() {
                                         className="flex items-center gap-1 text-orange-500 text-sm font-medium"
                                     >
                                         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                        Ingredients ({recipe.ingredients.length})
+                                        {t('recipe.ingredientsCount', 'Інгредієнти ({{count}})', { count: recipe.ingredients.length })}
                                     </button>
 
                                     {isExpanded && (
@@ -229,7 +223,7 @@ export default function Generate() {
                                     onClick={() => handleChooseRecipe(recipe)}
                                     className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-2xl transition-colors shadow-lg shadow-orange-500/20"
                                 >
-                                    Choose this recipe
+                                    {t('generate.selectBtn', 'Обрати цей рецепт')}
                                 </button>
                             </div>
                         )
@@ -242,7 +236,6 @@ export default function Generate() {
     if (step === 'ingredients') {
         return (
             <div className="space-y-6 animate-slide-up pb-10">
-                {/* КНОПКА НАЗАД */}
                 <button onClick={handleBack} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
                     <ArrowLeft size={20} /> {t('common.back', 'Назад')}
                 </button>
@@ -253,7 +246,7 @@ export default function Generate() {
 
                 <div className="bg-[#1a1a2e] rounded-2xl border border-white/5 p-5">
                     <p className="text-sm text-gray-400 mb-4 text-center">
-                        Натисніть на інгредієнт, якщо хочете виключити його з рецепту.
+                        {t('generate.excludeHint', 'Натисніть на інгредієнт, якщо хочете виключити його з рецепту.')}
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center">
                         {ingredients.map((ing, i) => {
@@ -329,15 +322,15 @@ export default function Generate() {
                                         onClick={() => cameraInputRef.current?.click()}
                                         className="flex md:hidden items-center justify-center gap-2 px-4 py-2 bg-orange-500/20 text-orange-400 rounded-xl text-xs font-bold"
                                     >
-                                        <Camera size={16} /> Камера
+                                        <Camera size={16} /> {t('generate.cameraBtn', 'Камера')}
                                     </button>
                                     <button
                                         onClick={() => galleryInputRef.current?.click()}
                                         className="flex items-center justify-center gap-2 px-4 py-2 bg-white/10 text-gray-300 rounded-xl text-xs font-bold hover:bg-white/20 transition-colors"
                                     >
-                                        <Upload size={16} /> Галерея
+                                        <Upload size={16} /> {t('generate.galleryBtn', 'Галерея')}
                                     </button>
-                                    <span className="text-[10px] text-gray-500">{photos.length}/3 завантажено</span>
+                                    <span className="text-[10px] text-gray-500">{photos.length}/3 {t('generate.uploaded', 'завантажено')}</span>
                                 </div>
                             )}
                         </div>
