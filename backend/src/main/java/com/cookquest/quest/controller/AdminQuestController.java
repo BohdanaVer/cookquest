@@ -1,7 +1,7 @@
 package com.cookquest.quest.controller;
 
-import com.cookquest.quest.dto.QuestRequestDTO;
-import com.cookquest.quest.dto.WeekRequestDTO;
+import com.cookquest.quest.dto.QuestRequestDto;
+import com.cookquest.quest.dto.WeekRequestDto;
 import com.cookquest.quest.entity.Quest;
 import com.cookquest.quest.entity.Week;
 import com.cookquest.quest.service.QuestService;
@@ -26,12 +26,12 @@ public class AdminQuestController {
     }
 
     @PostMapping
-    public ResponseEntity<Quest> createQuest(@RequestBody QuestRequestDTO request) {
+    public ResponseEntity<Quest> createQuest(@RequestBody QuestRequestDto request) {
         return ResponseEntity.ok(questService.createQuest(request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Quest> updateQuest(@PathVariable Long id, @RequestBody QuestRequestDTO request) {
+    public ResponseEntity<Quest> updateQuest(@PathVariable Long id, @RequestBody QuestRequestDto request) {
         return ResponseEntity.ok(questService.updateQuest(id, request));
     }
 
@@ -47,7 +47,7 @@ public class AdminQuestController {
     }
 
     @PostMapping("/weeks")
-    public ResponseEntity<Week> createWeek(@RequestBody WeekRequestDTO request) {
+    public ResponseEntity<Week> createWeek(@RequestBody WeekRequestDto request) {
         return ResponseEntity.ok(questService.createWeek(request));
     }
 }

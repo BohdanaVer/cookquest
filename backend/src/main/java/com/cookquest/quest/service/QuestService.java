@@ -1,12 +1,9 @@
 package com.cookquest.quest.service;
 
-import com.cookquest.auth.entity.User;
-import com.cookquest.quest.dto.QuestRequestDTO;
-import com.cookquest.quest.dto.WeekRequestDTO;
-import com.cookquest.quest.entity.CompletedQuest;
-import com.cookquest.quest.entity.Day;
-import com.cookquest.quest.entity.Quest;
-import com.cookquest.quest.entity.Week;
+import com.cookquest.quest.dto.QuestRequestDto;
+import com.cookquest.quest.dto.QuestResponseDto;
+import com.cookquest.quest.dto.WeekRequestDto;
+import com.cookquest.quest.entity.*;
 import com.cookquest.quest.repository.CompletedQuestRepository;
 import com.cookquest.quest.repository.DayRepository;
 import com.cookquest.quest.repository.QuestRepository;
@@ -18,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -38,7 +36,7 @@ public class QuestService {
     }
 
     @Transactional
-    public Week createWeek(WeekRequestDTO request) {
+    public Week createWeek(WeekRequestDto request) {
         LocalDate startDate = request.startDate();
 
         if (startDate.getDayOfWeek() != DayOfWeek.MONDAY) {
@@ -68,7 +66,7 @@ public class QuestService {
 
 
     @Transactional
-    public Quest createQuest(QuestRequestDTO request) {
+    public Quest createQuest(QuestRequestDto request) {
         Day day = dayRepository.findById(request.dayId())
                 .orElseThrow(() -> new RuntimeException("День не знайдено з id: " + request.dayId()));
 
@@ -83,7 +81,7 @@ public class QuestService {
     }
 
     @Transactional
-    public Quest updateQuest(Long id, QuestRequestDTO request) {
+    public Quest updateQuest(Long id, QuestRequestDto request) {
         Quest quest = questRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Квест не знайдено з id: " + id));
 
@@ -93,6 +91,7 @@ public class QuestService {
         quest.setRecipeId(request.recipeId());
         quest.setXpMultiplier(request.xpMultiplier() != null ? request.xpMultiplier() : 1.0);
         quest.setCuisineName(request.cuisineName());
+        quest.setDay(day);
 
         return questRepository.save(quest);
     }
@@ -149,7 +148,6 @@ public class QuestService {
     @Transactional(readOnly = true)
     public Double getQuestMultiplier(String recipeId) {
         Optional<Quest> todayQuestOpt = questRepository.findByRecipeIdAndDayDate(recipeId, LocalDate.now());
-        // Якщо квесту немає, повертаємо базовий множник 1.0
         return todayQuestOpt.map(Quest::getXpMultiplier).orElse(1.0);
     }
 
@@ -166,7 +164,6 @@ public class QuestService {
 
         if (cqOpt.isPresent()) {
             CompletedQuest cq = cqOpt.get();
-            // Якщо запис вже є, але без дати завершення (наприклад, створений при старті сесії)
             if (cq.getCompletedAt() == null) {
                 cq.setCompletedAt(LocalDateTime.now());
                 completedQuestRepository.save(cq);
@@ -182,5 +179,38 @@ public class QuestService {
                             .build()
             );
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuestResponseDto> getQuestsForUser(Long userId) {
+        LocalDate today = LocalDate.now();
+        LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate endOfWeek = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+
+        List<Quest> weekQuests = questRepository.findAllByDayDateBetween(startOfWeek, endOfWeek);
+
+        return weekQuests.stream().map(quest -> {
+            LocalDate questDate = quest.getDay().getDate();
+            boolean isCompleted = isQuestCompletedByUser(userId, quest.getRecipeId());
+
+            QuestStatus currentStatus;
+
+            if (questDate.isAfter(today)) {
+                currentStatus = QuestStatus.LOCKED;
+            } else if (isCompleted) {
+                currentStatus = QuestStatus.COMPLETED;
+            } else {
+                currentStatus = QuestStatus.AVAILABLE;
+            }
+
+            return QuestResponseDto.builder()
+                    .id(quest.getId())
+                    .recipeId(quest.getRecipeId())
+                    .activeDate(questDate.toString())
+                    .xpMultiplier(quest.getXpMultiplier())
+                    .cuisineName(quest.getCuisineName())
+                    .status(currentStatus)
+                    .build();
+        }).toList();
     }
 }

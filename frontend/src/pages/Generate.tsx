@@ -1,122 +1,239 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Camera, Shuffle, X, Upload, Plus } from 'lucide-react'
+import { Camera, Shuffle, X, Upload, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react'
 import { cn } from '../lib/utils'
-import { DIFFICULTY_COLORS } from '../lib/constants'
 import Mascot from '../components/mascot'
 import { useActiveMascot } from '../components/mascot-provider'
 import { useTranslation } from 'react-i18next'
-
-// ============================================================================
-// ⚠️ MOCK DATA
-// ============================================================================
-const MOCK_FRIDGE_ITEMS = ['Яйця', 'Томати', 'Сир', 'Куряче філе', 'Цибуля']
-const MOCK_DETECTED_INGREDIENTS = ['Помідори', 'Яйця', 'Сир', 'Молоко']
-const MOCK_GENERATED_RECIPES = [
-    {
-        id: 'mock-1',
-        name: 'Омлет з сиром та томатами',
-        description: 'Ніжний омлет із розплавленим сиром та соковитими томатами.',
-        difficulty: 'easy' as const,
-        points: 50,
-        cuisine_type: 'Європейська',
-        ingredients: ['2 яйця', '50г сиру', '1 томат'],
-        instructions: [{ step: 1, title: 'Збиваємо', description: '...' }]
-    }
-]
+import { api } from '../api/axiosClient'
 
 type MascotName = "broccoli" | "slime" | "cheese" | "pepper" | "icecream" | "stove" | "cauldron" | "knightpan";
 
-// ============================================================================
+export interface Recipe {
+    id: string;
+    name: string;
+    description: string;
+    difficulty: string;
+    points: number;
+    cookingTimeMinutes: number;
+    cuisine: string;
+    dietaryTags: string[];
+    ingredients: Array<{ name: string; amount: string; unit: string }>;
+    steps: Array<{ text: string; isCheckpoint: boolean; checkpointLabel: string | null }>;
+    stepCount: number;
+}
+
 
 export default function Generate() {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const navigate = useNavigate()
     const location = useLocation()
     const searchParams = new URLSearchParams(location.search)
     const activeMascot = useActiveMascot()
 
-    const [mode, setMode] = useState<'photo' | 'random'>('photo')
-    const [step, setStep] = useState<'input' | 'ingredients' | 'recipes'>('input')
+    const [mode, setMode] = useState<'photo' | 'random'>(() => sessionStorage.getItem('gen_mode') as 'photo' | 'random' || 'photo')
+    const [step, setStep] = useState<'input' | 'ingredients' | 'recipes'>(() => sessionStorage.getItem('gen_step') as 'input' | 'ingredients' | 'recipes' || 'input')
     const [loading, setLoading] = useState(false)
 
-    const [photos, setPhotos] = useState<string[]>([])
-    const [prompt, setPrompt] = useState(searchParams.get('challengeDescription') || '')
-    const [fridgeItems] = useState<string[]>(MOCK_FRIDGE_ITEMS)
-    const [selectedFridgeItems, setSelectedFridgeItems] = useState<Set<string>>(new Set())
+    const [photos, setPhotos] = useState<File[]>([])
+    const [photoUrls, setPhotoUrls] = useState<string[]>([])
+    const [prompt, setPrompt] = useState(() => sessionStorage.getItem('gen_prompt') || searchParams.get('challengeDescription') || '')
 
-    const [ingredients, setIngredients] = useState<string[]>([])
-    const [excluded, setExcluded] = useState<Set<string>>(new Set())
-    const [recipes, setRecipes] = useState<any[]>([])
+    const [ingredients, setIngredients] = useState<string[]>(() => JSON.parse(sessionStorage.getItem('gen_ingredients') || '[]'))
+    const [excluded, setExcluded] = useState<Set<string>>(() => new Set(JSON.parse(sessionStorage.getItem('gen_excluded') || '[]')))
+    const [recipes, setRecipes] = useState<Recipe[]>(() => JSON.parse(sessionStorage.getItem('gen_recipes') || '[]'))
+    const [expandedRecipeId, setExpandedRecipeId] = useState<string | null>(null)
 
     const cameraInputRef = useRef<HTMLInputElement>(null)
     const galleryInputRef = useRef<HTMLInputElement>(null)
 
-    const removePhoto = (indexToRemove: number) => {
-        setPhotos(prev => prev.filter((_, index) => index !== indexToRemove))
+    useEffect(() => {
+        sessionStorage.setItem('gen_mode', mode)
+        sessionStorage.setItem('gen_step', step)
+        sessionStorage.setItem('gen_prompt', prompt)
+        sessionStorage.setItem('gen_ingredients', JSON.stringify(ingredients))
+        sessionStorage.setItem('gen_excluded', JSON.stringify(Array.from(excluded)))
+        sessionStorage.setItem('gen_recipes', JSON.stringify(recipes))
+    }, [mode, step, prompt, ingredients, excluded, recipes])
+
+
+    const handleBack = () => {
+        if (step === 'recipes') {
+            setRecipes([]);
+            setStep(mode === 'photo' ? 'ingredients' : 'input');
+        } else if (step === 'ingredients') {
+            setIngredients([]);
+            setExcluded(new Set());
+            setStep('input');
+        }
     }
 
-    // LOGIC IMITATION
-    const addPhotoMock = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+    const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
-        if (photos.length >= 3) return toast.error(t('generate.maxPhotosError'))
-        setPhotos(prev => [...prev, URL.createObjectURL(file)])
+        if (photos.length >= 3) return toast.error(t('generate.maxPhotosError', 'Максимум 3 фото'))
+
+        setPhotos(prev => [...prev, file])
+        setPhotoUrls(prev => [...prev, URL.createObjectURL(file)])
         e.target.value = ''
     }
 
-    const analyzePhotosMock = () => {
-        setLoading(true)
-        setTimeout(() => {
-            setIngredients(MOCK_DETECTED_INGREDIENTS)
-            setStep('ingredients')
-            setLoading(false)
-        }, 1500)
+    const removePhoto = (indexToRemove: number) => {
+        setPhotos(prev => prev.filter((_, index) => index !== indexToRemove))
+        setPhotoUrls(prev => prev.filter((_, index) => index !== indexToRemove))
     }
 
-    const generateRecipesMock = () => {
+
+    const analyzePhotos = async () => {
+        if (photos.length === 0) return toast.error("Додайте хоча б одне фото")
+
         setLoading(true)
-        setTimeout(() => {
-            setRecipes(MOCK_GENERATED_RECIPES)
-            setStep('recipes')
-            setLoading(false)
-        }, 2000)
+        try {
+            const formData = new FormData();
+            photos.forEach(photo => formData.append('files', photo));
+
+            const currentLang = i18n.language || window.localStorage.getItem('i18nextLng') || '';
+            const lang = (currentLang.toLowerCase().includes('uk') || currentLang.toLowerCase().includes('ua')) ? 'uk' : 'en';
+
+            const response = await api.post(`/api/v1/recipes/recognize?language=${lang}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            const recognized = response.data.recognizedIngredients;
+            if (recognized && recognized.length > 0) {
+                setExcluded(new Set());
+                setRecipes([]);
+                setIngredients(recognized);
+                setStep('ingredients');
+                toast.success(t('generate.foundIngredients', 'Інгредієнти розпізнано!'));
+            } else {
+                toast.error("Не вдалося розпізнати інгредієнти");
+            }
+        } catch (error) {
+            console.error("Помилка розпізнавання:", error);
+            toast.error("Сталася помилка при аналізі фото");
+        } finally {
+            setLoading(false);
+        }
     }
 
-    const toggleFridgeItem = (item: string) => {
-        setSelectedFridgeItems(prev => {
-            const next = new Set(prev)
-            if (next.has(item)) next.delete(item)
-            else next.add(item)
-            return next
-        })
+    const generateRecipes = async () => {
+        const activeIngredients = ingredients.filter(ing => !excluded.has(ing));
+
+        if (mode === 'random' && !prompt.trim()) {
+            return toast.warning("Введіть запит для генерації");
+        }
+        if (mode === 'photo' && activeIngredients.length === 0) {
+            return toast.warning("Немає активних інгредієнтів для рецепту");
+        }
+
+        setLoading(true)
+        try {
+            const currentLang = i18n.language || window.localStorage.getItem('i18nextLng') || '';
+            const lang = (currentLang.toLowerCase().includes('uk') || currentLang.toLowerCase().includes('ua')) ? 'uk' : 'en';
+
+            const payload = {
+                textQuery: mode === 'random' ? prompt : "",
+                ingredients: mode === 'photo' ? activeIngredients : [],
+                requestLanguage: lang
+            };
+
+            const response = await api.post('/api/v1/recipes/generate', payload);
+
+            if (response.data.recipes && response.data.recipes.length > 0) {
+                setRecipes(response.data.recipes);
+                setStep('recipes');
+                toast.success("Рецепти готові!");
+            } else {
+                toast.error("Не вдалося згенерувати рецепти");
+            }
+        } catch (error) {
+            console.error("Помилка генерації:", error);
+            toast.error("Не вдалося згенерувати рецепти. Спробуйте ще раз.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    const handleChooseRecipe = (recipe: Recipe) => {
+        sessionStorage.setItem('current_viewing_recipe', JSON.stringify(recipe));
+        navigate(`/recipe/${recipe.id}`);
     }
 
 
     if (step === 'recipes') {
         return (
-            <div className="space-y-4 animate-slide-up">
-                <div className="flex justify-center">
-                    <Mascot name={activeMascot as MascotName} mood="happy" size={80} message={t('generate.mascotSelect')} animation="pop" />
+            <div className="space-y-4 animate-slide-up pb-20">
+                {/* КНОПКА НАЗАД */}
+                <button onClick={handleBack} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                    <ArrowLeft size={20} /> {t('common.back', 'Назад')}
+                </button>
+
+                <div className="flex justify-center mb-6">
+                    <Mascot name={activeMascot as MascotName} mood="happy" size={80} message={t('generate.mascotSelect', 'Обери рецепт!')} animation="pop" />
                 </div>
-                <div className="space-y-3">
-                    {recipes.map((recipe) => (
-                        <div key={recipe.id} className="bg-[#1a1a2e] rounded-2xl border border-white/5 p-5 hover:border-orange-500/30 transition-all">
-                            <div className="flex items-start justify-between mb-2">
-                                <h3 className="font-bold text-white text-lg">{recipe.name}</h3>
-                                <span className={cn('text-xs px-2 py-1 rounded-full font-bold', DIFFICULTY_COLORS[recipe.difficulty as keyof typeof DIFFICULTY_COLORS])}>
-                                    {t(`generate.difficulty.${recipe.difficulty}`)}
-                                </span>
+
+                <div className="space-y-4">
+                    {recipes.map((recipe) => {
+                        const isExpanded = expandedRecipeId === recipe.id;
+
+                        const difficultyColor = recipe.difficulty.toLowerCase() === 'easy' ? 'bg-green-500/20 text-green-400' :
+                            recipe.difficulty.toLowerCase() === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                'bg-red-500/20 text-red-400';
+
+                        return (
+                            <div key={recipe.id} className="bg-[#1a1a2e] rounded-3xl border border-white/5 p-5 transition-all">
+
+                                <div className="flex items-start justify-between mb-3 gap-2">
+                                    <h3 className="font-bold text-white text-lg leading-tight">{recipe.name}</h3>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className={cn('text-[10px] px-2.5 py-1 rounded-full font-bold uppercase', difficultyColor)}>
+                                            {t(`difficulty.${recipe.difficulty.toLowerCase()}`, recipe.difficulty)}
+                                        </span>
+                                        <span className="text-orange-500 font-bold text-sm">
+                                            +{recipe.points} XP
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <p className="text-gray-400 text-sm mb-4 leading-relaxed line-clamp-3">
+                                    {recipe.description}
+                                </p>
+
+                                <div className="mb-4">
+                                    <button
+                                        onClick={() => setExpandedRecipeId(isExpanded ? null : recipe.id)}
+                                        className="flex items-center gap-1 text-orange-500 text-sm font-medium"
+                                    >
+                                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                        Ingredients ({recipe.ingredients.length})
+                                    </button>
+
+                                    {isExpanded && (
+                                        <div className="mt-3 space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+                                            {recipe.ingredients.map((ing, idx) => (
+                                                <div key={idx} className="flex justify-between text-sm text-gray-300 bg-white/5 px-3 py-2 rounded-lg">
+                                                    <span>{ing.name}</span>
+                                                    <span className="text-gray-500 font-medium">{ing.amount} {ing.unit}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button
+                                    onClick={() => handleChooseRecipe(recipe)}
+                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-2xl transition-colors shadow-lg shadow-orange-500/20"
+                                >
+                                    Choose this recipe
+                                </button>
                             </div>
-                            <p className="text-gray-400 text-sm mb-3">{recipe.description}</p>
-                            <button onClick={() => navigate(`/recipe/${recipe.id}`)} className="w-full bg-orange-500 text-white font-bold py-2.5 rounded-xl">
-                                {t('generate.selectBtn')}
-                            </button>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
             </div>
         )
@@ -124,19 +241,52 @@ export default function Generate() {
 
     if (step === 'ingredients') {
         return (
-            <div className="space-y-5 animate-slide-up">
+            <div className="space-y-6 animate-slide-up pb-10">
+                {/* КНОПКА НАЗАД */}
+                <button onClick={handleBack} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                    <ArrowLeft size={20} /> {t('common.back', 'Назад')}
+                </button>
+
                 <div className="flex justify-center">
-                    <Mascot name={activeMascot as MascotName} mood="happy" size={80} message={t('generate.mascotFound')} animation="pop" />
+                    <Mascot name={activeMascot as MascotName} mood="happy" size={80} message={t('generate.mascotFound', 'Я знайшов ці інгредієнти!')} animation="pop" />
                 </div>
-                <div className="flex flex-wrap gap-2">
-                    {ingredients.map((ing, i) => (
-                        <button key={i} onClick={() => setExcluded(prev => new Set(prev).add(ing))} className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-300">
-                            {ing}
-                        </button>
-                    ))}
+
+                <div className="bg-[#1a1a2e] rounded-2xl border border-white/5 p-5">
+                    <p className="text-sm text-gray-400 mb-4 text-center">
+                        Натисніть на інгредієнт, якщо хочете виключити його з рецепту.
+                    </p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                        {ingredients.map((ing, i) => {
+                            const isExcluded = excluded.has(ing);
+                            return (
+                                <button
+                                    key={i}
+                                    onClick={() => setExcluded(prev => {
+                                        const newSet = new Set(prev);
+                                        if (isExcluded) newSet.delete(ing);
+                                        else newSet.add(ing);
+                                        return newSet;
+                                    })}
+                                    className={cn(
+                                        "px-4 py-2 rounded-xl text-sm font-bold transition-all border",
+                                        isExcluded
+                                            ? "bg-red-500/10 border-red-500/20 text-red-400 opacity-50 line-through"
+                                            : "bg-white/10 border-white/10 text-white"
+                                    )}
+                                >
+                                    {ing}
+                                </button>
+                            )
+                        })}
+                    </div>
                 </div>
-                <button onClick={generateRecipesMock} className="w-full bg-orange-500 text-white font-bold py-3 rounded-xl">
-                    {t('generate.findRecipesBtn')}
+
+                <button
+                    onClick={generateRecipes}
+                    disabled={loading || ingredients.filter(ing => !excluded.has(ing)).length === 0}
+                    className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold py-4 rounded-2xl shadow-lg transition-all"
+                >
+                    {loading ? t('generate.processing', 'Генерація...') : t('generate.findRecipesBtn', 'Згенерувати рецепти')}
                 </button>
             </div>
         )
@@ -145,104 +295,75 @@ export default function Generate() {
     return (
         <div className="space-y-8 animate-in fade-in duration-500 pb-10">
             <div className="flex justify-center">
-                <Mascot name={activeMascot as MascotName} mood="neutral" size={90} message={t('generate.mascotStart')} animation="pop" />
+                <Mascot name={activeMascot as MascotName} mood="neutral" size={90} message={t('generate.mascotStart', 'Що приготуємо?')} animation="pop" />
             </div>
 
             <div className="space-y-5">
-                <div className="flex bg-white/5 rounded-xl p-1">
-                    <button onClick={() => setMode('photo')} className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all', mode === 'photo' ? 'bg-orange-500 text-white shadow-lg' : 'text-gray-500')}>
-                        <Camera size={16} /> {t('generate.photoTab')}
+                <div className="flex bg-white/5 rounded-2xl p-1.5">
+                    <button onClick={() => setMode('photo')} className={cn('flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all', mode === 'photo' ? 'bg-orange-500 text-white shadow-lg' : 'text-gray-500')}>
+                        <Camera size={18} /> {t('generate.photoTab', 'Фото')}
                     </button>
-                    <button onClick={() => setMode('random')} className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all', mode === 'random' ? 'bg-orange-500 text-white shadow-lg' : 'text-gray-500')}>
-                        <Shuffle size={16} /> {t('generate.generatorTab')}
+                    <button onClick={() => setMode('random')} className={cn('flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all', mode === 'random' ? 'bg-[#1a1a2e] text-white shadow-lg' : 'text-gray-500')}>
+                        <Shuffle size={18} /> {t('generate.generatorTab', 'Генератор')}
                     </button>
                 </div>
 
                 {mode === 'photo' ? (
                     <div className="space-y-4 animate-slide-up">
-                        <div className="grid grid-cols-3 gap-3">
-                            {photos.map((url, i) => (
-                                <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {photoUrls.map((url, i) => (
+                                <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group">
                                     <img src={url} alt="" className="w-full h-full object-cover" />
                                     <button
                                         onClick={() => removePhoto(i)}
-                                        className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="absolute top-2 right-2 w-6 h-6 bg-red-500/80 backdrop-blur-sm text-white rounded-full flex items-center justify-center opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity"
                                     >
-                                        <X size={10} />
+                                        <X size={14} />
                                     </button>
                                 </div>
                             ))}
 
                             {photos.length < 3 && (
-                                <div className="aspect-square rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2">
-
+                                <div className="aspect-square rounded-2xl border-2 border-dashed border-white/10 bg-white/5 flex flex-col items-center justify-center gap-3">
                                     <button
                                         onClick={() => cameraInputRef.current?.click()}
-                                        className="flex md:hidden items-center gap-1.5 px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg text-xs font-bold transition-colors"
+                                        className="flex md:hidden items-center justify-center gap-2 px-4 py-2 bg-orange-500/20 text-orange-400 rounded-xl text-xs font-bold"
                                     >
-                                        <Camera size={14} />
-                                        {t('generate.cameraBtn')}
+                                        <Camera size={16} /> Камера
                                     </button>
-
                                     <button
                                         onClick={() => galleryInputRef.current?.click()}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg text-xs font-bold transition-colors"
+                                        className="flex items-center justify-center gap-2 px-4 py-2 bg-white/10 text-gray-300 rounded-xl text-xs font-bold hover:bg-white/20 transition-colors"
                                     >
-                                        <Upload size={14} />
-                                        {t('generate.galleryBtn')}
+                                        <Upload size={16} /> Галерея
                                     </button>
-
-                                    <span className="text-[10px] text-gray-600">{photos.length}/3</span>
+                                    <span className="text-[10px] text-gray-500">{photos.length}/3 завантажено</span>
                                 </div>
                             )}
                         </div>
-                        <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={addPhotoMock} />
-                        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={addPhotoMock} />
+                        <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoAdd} />
+                        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoAdd} />
                     </div>
                 ) : (
-                    <textarea
-                        value={prompt}
-                        onChange={e => setPrompt(e.target.value)}
-                        rows={3}
-                        placeholder={t('generate.promptPlaceholder')}
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none text-sm resize-none"
-                    />
+                    <div className="animate-slide-up">
+                        <textarea
+                            value={prompt}
+                            onChange={e => setPrompt(e.target.value)}
+                            rows={4}
+                            placeholder={t('generate.promptPlaceholder', 'Наприклад: Згенеруй класичний рецепт лазаньї...')}
+                            className="w-full px-5 py-4 bg-[#1a1a2e] border border-white/10 rounded-2xl text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 text-sm resize-none shadow-inner"
+                        />
+                    </div>
                 )}
             </div>
 
-            <div className="space-y-3">
-                <h2 className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] pl-1">{t('generate.myFridge')}</h2>
-                <div className="flex flex-wrap gap-2">
-                    {fridgeItems.map(item => {
-                        const isSelected = selectedFridgeItems.has(item);
-                        return (
-                            <button
-                                key={item}
-                                onClick={() => toggleFridgeItem(item)}
-                                className={cn(
-                                    "px-4 py-2 rounded-xl text-sm font-bold transition-all border",
-                                    isSelected
-                                        ? "bg-orange-500/20 border-orange-500/40 text-orange-400"
-                                        : "bg-[#1a1a2e] border-white/10 text-gray-300 hover:border-white/20"
-                                )}
-                            >
-                                {item}
-                            </button>
-                        )
-                    })}
-                    <button className="w-10 h-10 rounded-xl border border-dashed border-white/10 text-gray-500 flex items-center justify-center hover:bg-white/5 transition-colors">
-                        <Plus size={18} />
-                    </button>
-                </div>
-            </div>
-
-            <div className="pt-2">
+            <div className="pt-4">
                 <button
-                    onClick={mode === 'photo' ? analyzePhotosMock : generateRecipesMock}
-                    disabled={loading || (mode === 'photo' && photos.length === 0 && selectedFridgeItems.size === 0)}
-                    className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl shadow-lg transition-all"
+                    onClick={mode === 'photo' ? analyzePhotos : generateRecipes}
+                    disabled={loading || (mode === 'photo' && photos.length === 0) || (mode === 'random' && prompt.trim().length === 0)}
+                    className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-white/5 disabled:text-gray-500 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl shadow-lg transition-all"
                 >
-                    {loading ? t('generate.processing') : mode === 'photo' ? t('generate.detectAndFindBtn') : t('generate.findRecipesBtn')}
+                    {loading ? t('generate.processing', 'Зачекайте...') : mode === 'photo' ? t('generate.detectAndFindBtn', 'Визначити продукти') : t('generate.findRecipesBtn', 'Згенерувати рецепти')}
                 </button>
             </div>
 
