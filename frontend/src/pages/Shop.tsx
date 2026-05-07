@@ -117,7 +117,6 @@ export default function Shop() {
         };
         
         loadData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const handleBuy = async (id: number) => {
@@ -126,6 +125,7 @@ export default function Shop() {
         try {
             await api.post(`/api/v1/mascots/${id}/buy`)
             await fetchShopData()
+            window.dispatchEvent(new Event('profileUpdated'))
         } catch (error: unknown) {
             const err = error as ApiError
             alert(err.response?.data?.message || "Помилка покупки")
@@ -140,6 +140,7 @@ export default function Shop() {
         try {
             await api.post(`/api/v1/mascots/${id}/equip`)
             await fetchShopData()
+            window.dispatchEvent(new Event('profileUpdated'))
         } catch (error: unknown) {
             const err = error as ApiError
             alert(err.response?.data?.message || "Помилка екіпірування")
@@ -151,7 +152,7 @@ export default function Shop() {
     const handleGenerate = async () => {
         if (actionLoading) return
         const currentBalance = user?.balance ?? 0
-        
+
         if (currentBalance < generationPrice) {
             alert(`Недостатньо монет! Потрібно ${generationPrice} 💰`)
             return
@@ -160,23 +161,14 @@ export default function Shop() {
         setActionLoading(true)
         try {
             const response = await api.post('/api/v1/mascots/generate', {
-                name,
-                description,
-                type,
-                subject: TYPES_WITH_SUBJECT.includes(type) ? subject : '', 
-                style,
-                personality,
-                color,
-                extraDetails
             })
-            
-            // Показуємо модалку з новим маскотом
+
             setGeneratedMascot(response.data)
-            
             await fetchShopData()
-            setIsGeneratorOpen(false) 
-            
-            // Очищаємо форму
+
+            window.dispatchEvent(new Event('profileUpdated'))
+
+            setIsGeneratorOpen(false)
             setName(''); setDescription(''); setSubject(''); setExtraDetails('');
         } catch (error: unknown) {
             const err = error as ApiError
