@@ -173,8 +173,8 @@
     "scanPhotoDesc": "AI визначить інгредієнти",
     "generator": "Генератор",
     "generatorDesc": "AI підбере рецепт",
-    "leaderboard": "Leaderboard",
-    "yourRating": "Your rating: #{{score}}"
+    "leaderboard": "Таблиця лідерів",
+    "yourRating": "Ваш рейтинг: #{{score}}"
   },
 
   "nav": {

@@ -113,17 +113,30 @@ export default function Cook() {
         setIsVerifying(true);
 
         try {
-            const formData = new FormData();
-            formData.append('stepNumber', stepIndex.toString());
-            formData.append('file', file);
-
             const currentLang = i18n.language || window.localStorage.getItem('i18nextLng') || '';
             const lang = (currentLang.toLowerCase().includes('uk') || currentLang.toLowerCase().includes('ua')) ? 'uk' : 'en';
-            formData.append('language', lang);
 
-            await api.post(`/api/v1/cooking/${session.sessionId}/verify-step`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await api.post(`/api/v1/cooking/${session.sessionId}/verify-step`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                params: {
+                    stepNumber: stepIndex + 1,
+                    language: lang
+                }
             });
+
+            const result = response.data;
+
+            if (result && result.passed === false) {
+                toast.error(result.feedback || t('cook.verifyFailed', 'Фото не пройшло перевірку. Спробуйте ще раз.'));
+                return false;
+            }
+
+            if (result && result.feedback) {
+                toast.success(result.feedback);
+            }
 
             return true;
         } catch (error) {
@@ -136,7 +149,8 @@ export default function Cook() {
     };
 
     const completeStepLocally = (stepIndex: number) => {
-        setCompletedSteps(stepIndex + 1);
+        if (isVerifying) return;
+        setCompletedSteps(prev => Math.max(prev, stepIndex + 1));
         toast.success(t('cook.stepDone', 'Крок {{n}} виконано!', { n: stepIndex + 1 }));
     };
 
@@ -150,13 +164,15 @@ export default function Cook() {
         const file = e.target.files?.[0];
         if (!file || pendingPhotoStepIndex === null) return;
 
-        const success = await verifyStepOnBackend(pendingPhotoStepIndex, file);
+        const currentStepIndex = pendingPhotoStepIndex;
+        e.target.value = '';
+
+        const success = await verifyStepOnBackend(currentStepIndex, file);
         if (success) {
-            completeStepLocally(pendingPhotoStepIndex);
+            completeStepLocally(currentStepIndex);
         }
 
         setPendingPhotoStepIndex(null);
-        e.target.value = '';
     };
 
     const handleFinishCooking = () => {
@@ -188,7 +204,7 @@ export default function Cook() {
 
     const totalSteps = recipe.steps.length;
     const progressPercentage = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
-    const isAllCompleted = completedSteps === totalSteps;
+    const isAllCompleted = completedSteps >= totalSteps;
 
     return (
         <div className="relative min-h-screen pb-32 animate-in fade-in duration-500">
@@ -209,7 +225,7 @@ export default function Cook() {
                 <div className="space-y-2">
                     <div className="flex justify-between text-xs text-gray-400 font-bold uppercase tracking-wider">
                         <span>{t('cook.progress', 'Прогрес')}</span>
-                        <span>{completedSteps}/{totalSteps}</span>
+                        <span>{Math.min(completedSteps, totalSteps)}/{totalSteps}</span>
                     </div>
                     <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                         <div
@@ -237,6 +253,8 @@ export default function Cook() {
 
                     const canTakeOptionalPhoto = session.xpMode === 'FULL' || (session.xpMode === 'REDUCED' && isLastStep);
                     const isThisStepVerifying = isVerifying && (index === pendingPhotoStepIndex);
+
+                    const hideManualDone = isLastStep && session.xpMode !== 'NONE';
 
                     return (
                         <div
@@ -268,14 +286,19 @@ export default function Cook() {
 
                                     {!isCompleted && isAccessible && (
                                         <div className="flex flex-wrap items-center gap-2 mt-2">
-                                            <button
-                                                onClick={() => completeStepLocally(index)}
-                                                disabled={isVerifying}
-                                                className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 disabled:opacity-50 bg-orange-500/20 hover:bg-orange-500/30 text-orange-500"
-                                            >
-                                                <Check size={16} /> {t('cook.done', 'Done')}
-                                            </button>
 
+                                            {/* Кнопка ручного завершення (ховається на останньому кроці за потреби) */}
+                                            {!hideManualDone && (
+                                                <button
+                                                    onClick={() => completeStepLocally(index)}
+                                                    disabled={isVerifying}
+                                                    className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 disabled:opacity-50 bg-orange-500/20 hover:bg-orange-500/30 text-orange-500"
+                                                >
+                                                    <Check size={16} /> {t('cook.done', 'Готово')}
+                                                </button>
+                                            )}
+
+                                            {/* Кнопка фото */}
                                             {canTakeOptionalPhoto && (
                                                 <button
                                                     onClick={() => handleTakePhoto(index)}
@@ -285,7 +308,7 @@ export default function Cook() {
                                                     {isThisStepVerifying ? (
                                                         <><Loader2 size={16} className="animate-spin" /> {t('cook.verifying', 'Перевірка...')}</>
                                                     ) : (
-                                                        <><Camera size={16} /> {t('cook.takePhotoXp', 'Take photo +XP')}</>
+                                                        <><Camera size={16} /> {hideManualDone ? t('cook.takePhotoRequired', 'Зробити фінальне фото') : t('cook.takePhotoXp', 'Фото +XP')}</>
                                                     )}
                                                 </button>
                                             )}

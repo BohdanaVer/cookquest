@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, ChefHat, Target, Trophy, ShoppingBag, Users, LogOut } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -19,18 +19,25 @@ export default function MainLayout() {
 
   const [user, setUser] = useState<UserProfileData | null>(null);
 
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      try {
-        const response = await api.get('/api/v1/profiles/me');
-        setUser(response.data);
-      } catch (error) {
-        console.error("Помилка завантаження даних шапки", error);
-      }
-    };
-
-    fetchProfileData();
+  const refreshData = useCallback(() => {
+    api.get('/api/v1/profiles/me')
+        .then((res) => {
+          setUser(res.data);
+        })
+        .catch((err) => {
+          console.error("Помилка оновлення шапки", err);
+        });
   }, []);
+
+  useEffect(() => {
+    refreshData();
+
+    window.addEventListener('profileUpdated', refreshData);
+
+    return () => {
+      window.removeEventListener('profileUpdated', refreshData);
+    };
+  }, [refreshData]);
 
   const balance = user?.balance ?? "...";
   const ratingScore = user?.ratingScore ?? user?.rating_score ?? "...";
@@ -53,7 +60,6 @@ export default function MainLayout() {
 
   return (
       <div className="min-h-[100dvh] bg-[#0f0f23] text-white flex flex-col relative">
-
         <nav className="fixed top-0 left-0 right-0 z-50 bg-[#1a1a2e]/90 backdrop-blur-md border-b border-white/5">
           <div className="max-w-4xl mx-auto px-4">
             <div className="flex items-center justify-between h-12">
@@ -64,16 +70,24 @@ export default function MainLayout() {
 
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-3 text-sm">
-                  <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-400 px-2.5 py-1 rounded-full text-xs font-bold">
+                  <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-400 px-2.5 py-1 rounded-full text-xs font-bold transition-all">
                     <span>💰</span> {balance}
                   </div>
-                  <div className="flex items-center gap-1 bg-purple-500/10 text-purple-400 px-2.5 py-1 rounded-full text-xs font-bold">
+                  <div className="flex items-center gap-1 bg-purple-500/10 text-purple-400 px-2.5 py-1 rounded-full text-xs font-bold transition-all">
                     <span>🏆</span> {ratingScore}
                   </div>
                 </div>
-                <Link to="/profile" className="w-8 h-8 rounded-full overflow-hidden border-2 border-orange-500/30 hover:border-orange-500 transition-colors flex-shrink-0">
-                  <img src={`/mascots/${activeMascot}_happy.png`} alt="profile" className="w-full h-full object-cover" />
+
+                {/* Аватар маскота тепер оновлюється автоматично */}
+                <Link to="/profile" className="w-8 h-8 rounded-full overflow-hidden border-2 border-orange-500/30 hover:border-orange-500 transition-all flex-shrink-0 bg-white/5">
+                  <img
+                      src={`/mascots/${activeMascot}_happy.png`}
+                      alt="profile"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.currentTarget.src = '/mascots/broccoli_happy.png' }}
+                  />
                 </Link>
+
                 <button onClick={handleLogout} className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center text-gray-500 hover:bg-red-500/20 hover:text-red-400 transition-colors">
                   <LogOut size={15} />
                 </button>
