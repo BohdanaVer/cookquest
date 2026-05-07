@@ -54,6 +54,23 @@ export default function RecipeDetail() {
         }
     }, [id, navigate, t])
 
+    useEffect(() => {
+        const checkIfSaved = async () => {
+            if (!id) return;
+            try {
+                const response = await api.get('/api/v1/recipes/saved');
+                const savedList = response.data;
+
+                const alreadySaved = savedList.some((r: { id: string | number }) => String(r.id) === String(id));
+                setIsBookmarked(alreadySaved);
+            } catch (error) {
+                console.error("Не вдалося перевірити статус збереження", error);
+            }
+        };
+
+        checkIfSaved();
+    }, [id]);
+
     const toggleBookmark = async () => {
         if (!recipe || isSaving) return;
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, Shuffle, Swords, Target, Zap, Trophy, ChefHat, ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import { Camera, Shuffle, Swords, Zap, Trophy, ChefHat, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import { MascotStatic } from '../components/mascot';
 import { useActiveMascot } from '../components/mascot-provider';
 import { getLevelInfo, getXpProgress } from '../lib/utils';
@@ -23,9 +23,15 @@ interface UserProfileData {
 
 interface CookingSessionDto {
   sessionId: number;
-  recipe: any;
+  recipe: unknown;
   status: string;
   startedAt: string;
+}
+
+interface PendingBattle {
+  id: string | number;
+  challenger: { username: string };
+  recipe: { name: string };
 }
 
 export default function Home() {
@@ -63,29 +69,21 @@ export default function Home() {
     fetchActiveSessions();
   }, []);
 
-  const getRecipeData = (recipeData: any) => {
+  const getRecipeData = (recipeData: unknown) => {
     if (!recipeData) return { id: '', name: 'Невідомий рецепт' };
     try {
-      const parsed = typeof recipeData === 'string' ? JSON.parse(recipeData) : recipeData;
-
+      const parsed = (typeof recipeData === 'string' ? JSON.parse(recipeData) : recipeData) as Record<string, unknown>;
       const realId = parsed.id || parsed.recipeId || parsed.recipe_id || '';
-
-      return { id: realId, name: parsed.name || 'Невідомий рецепт' };
-    } catch (e) {
+      return { id: String(realId), name: String(parsed.name || 'Невідомий рецепт') };
+    } catch {
       return { id: '', name: 'Невідомий рецепт' };
     }
   };
 
   const totalCooked = 0;
   const totalCompleted = 0;
-  const cuisine = 'Італійська';
 
-  const todayChallenge = {
-    description: 'Приготуй будь-яку страву Італійської кухні',
-    bonus_points: 75
-  };
-
-  const pendingBattles: any[] = [];
+  const pendingBattles: PendingBattle[] = [];
 
   const currentXp = user?.xp || 0;
   const ratingScore = user?.ratingScore || user?.rating_score || 0;
@@ -162,7 +160,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ДОДАНО: БЛОК АКТИВНИХ СЕСІЙ */}
         {activeSessions.length > 0 && (
             <div className="bg-[#1a1a2e] border border-orange-500/20 rounded-3xl p-5 animate-slide-up" style={{ animationDelay: '0.05s' }}>
               <div className="flex items-center gap-2 mb-4">
@@ -174,7 +171,6 @@ export default function Home() {
               </div>
 
               <div className="space-y-4">
-                {/* Відображаємо 1 сесію, або всі, якщо isSessionsExpanded === true */}
                 {activeSessions.slice(0, isSessionsExpanded ? activeSessions.length : 1).map((session, index) => {
                   const recipe = getRecipeData(session.recipe);
                   return (
@@ -197,7 +193,6 @@ export default function Home() {
                 })}
               </div>
 
-              {/* Кнопка "Розгорнути", якщо сесій більше однієї */}
               {activeSessions.length > 1 && (
                   <button
                       onClick={() => setIsSessionsExpanded(!isSessionsExpanded)}
@@ -235,43 +230,6 @@ export default function Home() {
               ))}
             </div>
         )}
-
-        {todayChallenge && (
-            <div className="animate-slide-up" style={{ animationDelay: '0.15s' }}>
-              <div className="relative overflow-hidden bg-gradient-to-br from-purple-600/20 to-violet-600/20 border border-purple-500/20 rounded-2xl p-5 hover:border-purple-500/40 transition-all cursor-pointer">
-                <div className="absolute top-2 right-2 bg-purple-500/20 text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  +{todayChallenge.bonus_points} XP
-                </div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
-                    <Target size={20} className="text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">{t('home.questOfDay')}</p>
-                    <p className="text-xs text-gray-500">{t('home.cuisineSuffix', { cuisine: cuisine })}</p>
-                  </div>
-                </div>
-                <p className="text-sm font-bold text-white mt-1">{todayChallenge.description}</p>
-                <div className="mt-3 bg-purple-500 hover:bg-purple-400 text-white text-center font-bold py-2 rounded-xl text-sm transition-colors">
-                  {t('home.completeQuest')}
-                </div>
-              </div>
-            </div>
-        )}
-
-        <div className="animate-slide-up" style={{ animationDelay: '0.15s' }}>
-          <div className="bg-gradient-to-br from-purple-600/10 to-violet-600/10 border border-purple-500/10 rounded-2xl p-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
-                <Target size={20} className="text-purple-400" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-white">{t('home.cuisineWeek', { cuisine: cuisine })}</p>
-                <p className="text-xs text-gray-500">{t('home.cuisineWeekDesc')}</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <div className="grid grid-cols-2 gap-3 animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <Link to="/generate?mode=photo" className="bg-[#1a1a2e] border border-white/5 rounded-2xl p-4 hover:border-orange-500/30 transition-all group">
