@@ -36,4 +36,9 @@ public class MascotController {
     public ResponseEntity<MascotCatalogDto> generateCustomMascot(@RequestBody MascotConfig config) {
         return ResponseEntity.ok(mascotService.generateCustomMascot(config));
     }
+
+    @GetMapping("/settings")
+    public ResponseEntity<java.util.Map<String, Integer>> getMascotSettings() {
+        return ResponseEntity.ok(java.util.Map.of("generationPrice", mascotService.getGenerationPrice()));
+    }
 }

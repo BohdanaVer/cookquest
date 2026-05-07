@@ -42,4 +42,7 @@ public class Mascot {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MascotRarity rarity;
+
+    @Column(length = 50)
+    private String description;
 }

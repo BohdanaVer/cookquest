@@ -6,5 +6,5 @@ public record LeaderboardDto(
         int xp,
         int levelNumber,
         String levelName,
-        Long activeMascotId
+        String mascotImageUrl
 ) {}

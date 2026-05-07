@@ -8,6 +8,7 @@ import com.cookquest.mascot.ai.client.StabilityApiClient;
 import com.cookquest.mascot.ai.prompt.MascotPromptBuilder;
 import com.cookquest.mascot.dto.MascotCatalogDto;
 import com.cookquest.mascot.dto.MascotConfig;
+import com.cookquest.mascot.dto.MascotImagesDto;
 import com.cookquest.mascot.entity.Mascot;
 import com.cookquest.mascot.entity.MascotRarity;
 import com.cookquest.mascot.entity.MascotType;
@@ -27,6 +28,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
 @Service
@@ -43,6 +45,13 @@ public class MascotService {
     private final FileStorageService fileStorageService;
     private final GroqClient groqClient;
 
+    @Value("${app.mascot.generation-price:2000}")
+    private int generationPrice;
+
+    public int getGenerationPrice() {
+        return generationPrice;
+    }
+
     private Long getCurrentUserId() {
         return currentUserService.getCurrentUser().getId();
     }
@@ -50,18 +59,19 @@ public class MascotService {
     @Transactional(readOnly = true)
     public List<MascotCatalogDto> getCatalog() {
         Long userId = getCurrentUserId();
-        
+
         List<Mascot> visibleMascots = mascotRepository.findBaseAndUserCustomMascots(MascotType.BASE, MascotType.CUSTOM, userId);
-        
+
         List<Long> ownedMascotIds = userMascotRepository.findByUserId(userId).stream()
                 .map(um -> um.getMascot().getId())
                 .toList();
-                
+
         Long activeMascotId = profileMascotApi.getActiveMascot(userId);
 
         return visibleMascots.stream().map(m -> new MascotCatalogDto(
                 m.getId(),
                 m.getName(),
+                m.getDescription(),
                 m.getType().name(),
                 m.getImageUrlHappy(),
                 m.getImageUrlNeutral(),
@@ -100,9 +110,16 @@ public class MascotService {
         userMascotRepository.save(userMascot);
 
         return new MascotCatalogDto(
-                mascot.getId(), mascot.getName(), mascot.getType().name(),
-                mascot.getImageUrlHappy(), mascot.getImageUrlNeutral(), mascot.getImageUrlSad(),
-                mascot.getPrice(), true, false
+                mascot.getId(),
+                mascot.getName(),
+                mascot.getDescription(),
+                mascot.getType().name(),
+                mascot.getImageUrlHappy(),
+                mascot.getImageUrlNeutral(),
+                mascot.getImageUrlSad(),
+                mascot.getPrice(),
+                true,
+                false
         );
     }
 
@@ -117,22 +134,22 @@ public class MascotService {
         profileMascotApi.updateActiveMascot(userId, mascotId);
     }
 
-    /*
+  /*
     @Transactional
     public MascotCatalogDto generateCustomMascot(MascotConfig config) {
         Long userId = currentUserService.getCurrentUser().getId();
 
-        final int GENERATION_PRICE = 2000;
+        final int GENERATION_PRICE = generationPrice;
 
-        if (!economyMascotApi.hasEnoughCoins(userId, GENERATION_PRICE)) {
+        if (!economyMascotApi.hasEnoughCoins(userId, generationPrice)) {
             throw new AppException(
                     ErrorCode.INVALID_REQUEST,
-                    "Недостатньо монет для генерації. Потрібно: " + GENERATION_PRICE,
+                    "Недостатньо монет для генерації. Потрібно: " + generationPrice,
                     HttpStatus.BAD_REQUEST
             );
         }
 
-        economyMascotApi.deductCoins(userId, GENERATION_PRICE);
+        economyMascotApi.deductCoins(userId, generationPrice);
 
         try {
             String translatedSubject = groqClient.translateToEnglish(config.subject());
@@ -158,8 +175,15 @@ public class MascotService {
 
             String cloudUrl = fileStorageService.saveImageToCloud(finalTransparentImage, "mascots", fileName);
 
+            // Підготовка опису: беремо extraDetails, якщо пусто — пустий рядок, якщо більше 50 символів — обрізаємо
+            String customDesc = config.description() != null ? config.description() : "";
+            if (customDesc.length() > 50) {
+                customDesc = customDesc.substring(0, 47) + "...";
+            }
+
             Mascot mascot = Mascot.builder()
                     .name(config.name() != null && !config.name().isBlank() ? config.name() : "Кастомний Маскот")
+                    .description(customDesc) // Зберігаємо опис
                     .type(MascotType.CUSTOM)
                     .rarity(MascotRarity.LEGENDARY)
                     .imageUrlHappy(cloudUrl)
@@ -178,8 +202,9 @@ public class MascotService {
                     .build();
             userMascotRepository.save(userMascot);
 
+            // Додаємо mascot.getDescription() до DTO
             return new MascotCatalogDto(
-                    mascot.getId(), mascot.getName(), mascot.getType().name(),
+                    mascot.getId(), mascot.getName(), mascot.getDescription(), mascot.getType().name(),
                     mascot.getImageUrlHappy(), mascot.getImageUrlNeutral(), mascot.getImageUrlSad(),
                     mascot.getPrice(), true, false
             );
@@ -190,24 +215,24 @@ public class MascotService {
             throw new AppException(ErrorCode.INTERNAL_ERROR, "Помилка генерації: " + cause.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-    */
+*/
 
     // TODO: ЗАМІНИТИ НА СПРАВЖНІЙ МЕТОД ПЕРЕД РЕЛІЗОМ
     @Transactional
     public MascotCatalogDto generateCustomMascot(MascotConfig config) {
         Long userId = currentUserService.getCurrentUser().getId();
 
-        final int GENERATION_PRICE = 2000;
+        final int GENERATION_PRICE = generationPrice;
 
-        if (!economyMascotApi.hasEnoughCoins(userId, GENERATION_PRICE)) {
+        if (!economyMascotApi.hasEnoughCoins(userId, generationPrice)) {
             throw new AppException(
                     ErrorCode.INVALID_REQUEST,
-                    "Недостатньо монет для генерації. Потрібно: " + GENERATION_PRICE,
+                    "Недостатньо монет для генерації. Потрібно: " + generationPrice,
                     HttpStatus.BAD_REQUEST
             );
         }
 
-        economyMascotApi.deductCoins(userId, GENERATION_PRICE);
+        economyMascotApi.deductCoins(userId, generationPrice);
 
         log.info("Викликано MOCK-генерацію маскота для юзера {}. ШІ та Cloudinary вимкнено.", userId);
 
@@ -216,10 +241,16 @@ public class MascotService {
 
             String mockCloudUrl = "https://res.cloudinary.com/dhw5at0ia/image/upload/v1778081614/mascots/custom_d9e8459c-7c85-410d-ae6f-a4c8efd693dd.png";
 
+            String customDesc = config.description() != null ? config.description() : "";
+            if (customDesc.length() > 50) {
+                customDesc = customDesc.substring(0, 47) + "...";
+            }
+
             Mascot mascot = Mascot.builder()
                     .name(config.name() != null && !config.name().isBlank()
                             ? config.name()
                             : "Кастомний Маскот (Mock)")
+                    .description(customDesc)
                     .type(MascotType.CUSTOM)
                     .rarity(MascotRarity.LEGENDARY)
                     .imageUrlHappy(mockCloudUrl)
@@ -241,7 +272,7 @@ public class MascotService {
             log.info("Mock-маскот успішно доданий в інвентар юзера з ID: {}", mascot.getId());
 
             return new MascotCatalogDto(
-                    mascot.getId(), mascot.getName(), mascot.getType().name(),
+                    mascot.getId(), mascot.getName(), mascot.getDescription(), mascot.getType().name(),
                     mascot.getImageUrlHappy(), mascot.getImageUrlNeutral(), mascot.getImageUrlSad(),
                     mascot.getPrice(), true, false
             );
@@ -254,5 +285,30 @@ public class MascotService {
             Throwable cause = e.getCause() != null ? e.getCause() : e;
             throw new AppException(ErrorCode.INTERNAL_ERROR, "Помилка генерації: " + cause.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Map<Long, String> getMascotHappyImagesMap(java.util.List<Long> mascotIds) {
+        if (mascotIds == null || mascotIds.isEmpty()) {
+            return new java.util.HashMap<>();
+        }
+        return mascotRepository.findAllById(mascotIds).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        Mascot::getId,
+                        Mascot::getImageUrlHappy
+                ));
+    }
+
+    @Transactional(readOnly = true)
+    public MascotImagesDto getMascotImages(Long mascotId) {
+        if (mascotId == null) return null;
+
+        return mascotRepository.findById(mascotId)
+                .map(m -> new MascotImagesDto(
+                        m.getImageUrlHappy(),
+                        m.getImageUrlNeutral(),
+                        m.getImageUrlSad()
+                ))
+                .orElse(null);
     }
 }

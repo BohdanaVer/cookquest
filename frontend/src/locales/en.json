@@ -47,42 +47,73 @@
     "saving": "Saving..."
   },
 
+  "MASCOT_BROCCOLI": "Broccoli",
+  "DESC_BROCCOLI": "Sporty and healthy, will give you energy!",
+  "MASCOT_SLIMEY": "Slimey",
+  "DESC_SLIMEY": "A cute jelly helper who is always around.",
+  "MASCOT_CHESSY": "Cheesy",
+  "DESC_CHESSY": "A piece of cheese with a huge heart.",
+  "MASCOT_PEPPY": "Peppy",
+  "DESC_PEPPY": "Sharp-tongued, but kind inside.",
+  "MASCOT_FROSTY": "Frosty",
+  "DESC_FROSTY": "Cold ice cream that melts from your success.",
+  "MASCOT_OVEN": "Oven",
+  "DESC_OVEN": "A hot oven that is always ready to work.",
+  "MASCOT_CAULDRON": "Cauldron",
+  "DESC_CAULDRON": "A mystical cauldron for magical soups.",
+  "MASCOT_KNIGHT": "Knight Pan",
+  "DESC_KNIGHT": "A brave defender of your kitchen.",
+
   "shop": {
     "title": "Shop",
     "balance": "Balance:",
-    "activeLabel": "Active",
-    "generatorTitle": "Mascot Generator",
-    "generatorSubtitle": "AI • Stability AI • 3 emotions",
+    "activeLabel": "Active Mascot",
+    "generatorTitle": "Generate Custom Mascot",
+    "subject": "What are we drawing? (Optional)",
+    "subjectPlaceholder": "For example: A knight with a fork...",
+    "extraDetails": "Additional details and description",
+    "extraDetailsPlaceholder": "A cool cat with blue eyes...",
     "type": "Type",
     "style": "Style",
-    "personality": "Personality",
-    "color": "Color",
-    "generateBtn": "Generate Mascot",
+    "personality": "Mood",
+    "color": "Main Color",
+    "generating": "Creating magic...",
+    "generateBtn": "Generate Custom Mascot",
+    "successTitle": "New Mascot!",
+    "successBtn": "Awesome!",
     "types": {
-      "chef": "Chef", "ingredient": "Ingred.", "dish": "Dish", "appliance": "Appliance", "animal": "Animal", "trophy": "Trophy"
+      "chef": "Chef",
+      "ingredient": "Ingredient",
+      "dish": "Dish",
+      "appliance": "Appliance",
+      "animal": "Animal",
+      "trophy": "Trophy"
     },
     "styles": {
-      "cartoon": "Cartoon", "chibi": "Chibi", "pixel": "Pixel", "flat": "Flat", "3d": "3D", "fantasy": "Fantasy"
+      "cartoon": "Cartoon",
+      "chibi": "Chibi",
+      "pixel": "Pixel",
+      "flat": "Flat",
+      "3d": "3D",
+      "fantasy": "Fantasy"
     },
     "personalities": {
-      "happy": "😄 Happy", "brave": "💪 Brave", "cute": "🥰 Cute", "wise": "🧐 Wise", "energetic": "⚡ Energetic", "mischievous": "😏 Mischievous"
+      "happy": "Happy",
+      "brave": "Brave",
+      "cute": "Cute",
+      "wise": "Wise",
+      "energetic": "Energetic",
+      "mischievous": "Mischievous"
     },
     "rarities": {
-      "common": "Common", "rare": "Rare", "epic": "Epic", "legendary": "Legendary"
+      "common": "Common",
+      "rare": "Rare",
+      "epic": "Epic",
+      "legendary": "Legendary"
     },
     "states": {
       "active": "Active",
-      "owned": "Owned"
-    },
-    "items": {
-      "broccoli": { "name": "Broccoli", "desc": "Cheerful veggie friend. Starter mascot!" },
-      "slime": { "name": "Slimey", "desc": "Cute green slime reaching for knowledge" },
-      "cheese": { "name": "Cheesy", "desc": "True cheese magnate in your kitchen" },
-      "pepper": { "name": "Peppy", "desc": "Spicy and fiery assistant" },
-      "icecream": { "name": "Frosty", "desc": "Cold, but with a warm heart" },
-      "stove": { "name": "Oven", "desc": "Keeper of fire and taste" },
-      "cauldron": { "name": "Cauldron", "desc": "Master of magical cooking" },
-      "knightpan": { "name": "Knight", "desc": "Invincible warrior of the kitchen!" }
+      "equip": "Equip"
     }
   },
 

@@ -7,6 +7,7 @@ import com.cookquest.profile.entity.Level;
 import com.cookquest.profile.entity.UserProfile;
 import com.cookquest.profile.repository.LevelRepository;
 import com.cookquest.profile.repository.UserProfileRepository;
+import com.cookquest.mascot.service.MascotService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +25,7 @@ public class ProfileService {
 
     private final UserProfileRepository profileRepository;
     private final LevelRepository levelRepository;
+    private final MascotService mascotService;
 
     @Transactional(readOnly = true)
     public UserProfileResponse getProfile(Long userId) {
@@ -129,7 +131,52 @@ public class ProfileService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public List<LeaderboardDto> getLeaderboard() {
+        List<UserProfile> topProfiles = profileRepository.findTopProfilesByXp(PageRequest.of(0, 10));
+
+        List<Long> mascotIds = topProfiles.stream()
+                .map(UserProfile::getActiveMascotId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+
+        java.util.Map<Long, String> mascotImageMap = mascotService.getMascotHappyImagesMap(mascotIds);
+
+        List<LeaderboardDto> leaderboard = new ArrayList<>();
+        for (int i = 0; i < topProfiles.size(); i++) {
+            UserProfile p = topProfiles.get(i);
+
+            String imageUrl = p.getActiveMascotId() != null
+                    ? mascotImageMap.get(p.getActiveMascotId())
+                    : null;
+
+            leaderboard.add(new LeaderboardDto(
+                    i + 1,
+                    p.getUser().getUsername(),
+                    p.getXp(),
+                    p.getLevel() != null ? p.getLevel().getLevelNumber() : 1,
+                    p.getLevel() != null ? p.getLevel().getName() : "Новачок",
+                    imageUrl
+            ));
+        }
+        return leaderboard;
+    }
+
     private UserProfileResponse mapToResponse(UserProfile p) {
+        String imgHappy = null;
+        String imgNeutral = null;
+        String imgSad = null;
+
+        if (p.getActiveMascotId() != null) {
+            com.cookquest.mascot.dto.MascotImagesDto images = mascotService.getMascotImages(p.getActiveMascotId());
+            if (images != null) {
+                imgHappy = images.happyUrl();
+                imgNeutral = images.neutralUrl();
+                imgSad = images.sadUrl();
+            }
+        }
+
         return new UserProfileResponse(
                 p.getId(),
                 p.getUser().getUsername(),
@@ -139,27 +186,10 @@ public class ProfileService {
                 p.getBalance(),
                 p.getRatingScore(),
                 p.getLanguage(),
-                p.getActiveMascotId(),
+                imgHappy,
+                imgNeutral,
+                imgSad,
                 p.getDietaryPreferences()
         );
-    }
-
-    @Transactional(readOnly = true)
-    public List<LeaderboardDto> getLeaderboard() {
-        List<UserProfile> topProfiles = profileRepository.findTopProfilesByXp(PageRequest.of(0, 10));
-        List<LeaderboardDto> leaderboard = new ArrayList<>();
-
-        for (int i = 0; i < topProfiles.size(); i++) {
-            UserProfile p = topProfiles.get(i);
-            leaderboard.add(new LeaderboardDto(
-                    i + 1,
-                    p.getUser().getUsername(),
-                    p.getXp(),
-                    p.getLevel() != null ? p.getLevel().getLevelNumber() : 1,
-                    p.getLevel() != null ? p.getLevel().getName() : "Новачок",
-                    p.getActiveMascotId()
-            ));
-        }
-        return leaderboard;
     }
 }

@@ -47,42 +47,73 @@
     "saving": "Зберігаю..."
   },
 
+  "MASCOT_BROCCOLI": "Броколі",
+  "DESC_BROCCOLI": "Спортивний та здоровий, додасть енергії!",
+  "MASCOT_SLIMEY": "Слаймі",
+  "DESC_SLIMEY": "Милий желейний помічник, який завжди поруч.",
+  "MASCOT_CHESSY": "Сирок",
+  "DESC_CHESSY": "Шматочок сиру з величезним серцем.",
+  "MASCOT_PEPPY": "Перчик",
+  "DESC_PEPPY": "Гострий на язик, але добрий всередині.",
+  "MASCOT_FROSTY": "Фрості",
+  "DESC_FROSTY": "Холодне морозиво, що тане від твоїх успіхів.",
+  "MASCOT_OVEN": "Пічка",
+  "DESC_OVEN": "Гаряча пічка, яка завжди готова до роботи.",
+  "MASCOT_CAULDRON": "Казанок",
+  "DESC_CAULDRON": "Містичний казанок для магічних супів.",
+  "MASCOT_KNIGHT": "Сковорода-Лицар",
+  "DESC_KNIGHT": "Відважний захисник твоєї кухні.",
+
   "shop": {
     "title": "Магазин",
     "balance": "Баланс:",
-    "activeLabel": "Активний",
-    "generatorTitle": "Генератор маскотів",
-    "generatorSubtitle": "ШІ • Stability AI • 3 емоції",
+    "activeLabel": "Активний маскот",
+    "generatorTitle": "Згенерувати кастомного",
+    "subject": "Що малюємо? (Опціонально)",
+    "subjectPlaceholder": "Наприклад: Лицар з виделкою...",
+    "extraDetails": "Додаткові деталі та опис",
+    "extraDetailsPlaceholder": "Крутий котик з блакитними очима...",
     "type": "Тип",
     "style": "Стиль",
-    "personality": "Характер",
-    "color": "Колір",
-    "generateBtn": "Згенерувати маскота",
+    "personality": "Настрій",
+    "color": "Головний колір",
+    "generating": "Створюємо магію...",
+    "generateBtn": "Згенерувати кастомного",
+    "successTitle": "Новий маскот!",
+    "successBtn": "Супер!",
     "types": {
-      "chef": "Шеф", "ingredient": "Інгред.", "dish": "Страва", "appliance": "Прилад", "animal": "Тварина", "trophy": "Трофей"
+      "chef": "Кухар",
+      "ingredient": "Продукт",
+      "dish": "Страва",
+      "appliance": "Прилад",
+      "animal": "Тваринка",
+      "trophy": "Трофей"
     },
     "styles": {
-      "cartoon": "Мульт", "chibi": "Чіббі", "pixel": "Піксель", "flat": "Flat", "3d": "3D", "fantasy": "Фентезі"
+      "cartoon": "Мультик",
+      "chibi": "Чібі",
+      "pixel": "Піксель",
+      "flat": "Флет",
+      "3d": "3D",
+      "fantasy": "Фентезі"
     },
     "personalities": {
-      "happy": "😄 Веселий", "brave": "💪 Відважний", "cute": "🥰 Милий", "wise": "🧐 Мудрий", "energetic": "⚡ Живий", "mischievous": "😏 Шибеник"
+      "happy": "Щасливий",
+      "brave": "Хоробрий",
+      "cute": "Милий",
+      "wise": "Мудрий",
+      "energetic": "Енергійний",
+      "mischievous": "Грайливий"
     },
     "rarities": {
-      "common": "Звичайний", "rare": "Рідкісний", "epic": "Епічний", "legendary": "Легендарний"
+      "common": "Звичайний",
+      "rare": "Рідкісний",
+      "epic": "Епічний",
+      "legendary": "Легендарний"
     },
     "states": {
       "active": "Активний",
-      "owned": "В наявності"
-    },
-    "items": {
-      "broccoli": { "name": "Броколі", "desc": "Веселий друг-овоч. Стартовий маскот!" },
-      "slime": { "name": "Слаймі", "desc": "Милий зелений слайм, що тягнеться до знань" },
-      "cheese": { "name": "Сирко", "desc": "Справжній сирний магнат на твоїй кухні" },
-      "pepper": { "name": "Перчик", "desc": "Гострий та запальний помічник" },
-      "icecream": { "name": "Морозко", "desc": "Холодний, але з теплим серцем" },
-      "stove": { "name": "Пічка", "desc": "Хранитель вогню та смаку" },
-      "cauldron": { "name": "Казанок", "desc": "Майстер магічної кулінарії" },
-      "knightpan": { "name": "Лицар", "desc": "Непереможний воїн кухні!" }
+      "equip": "Екіпірувати"
     }
   },
 

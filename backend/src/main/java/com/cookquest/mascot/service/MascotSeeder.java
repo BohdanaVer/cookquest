@@ -1,4 +1,4 @@
-package com.cookquest.mascot.service;
+package com.cookquest.mascot.config;
 
 import com.cookquest.mascot.entity.Mascot;
 import com.cookquest.mascot.entity.MascotRarity;
@@ -27,6 +27,7 @@ public class MascotSeeder implements CommandLineRunner {
 
                     Mascot.builder()
                             .name("MASCOT_BROCCOLI")
+                            .description("DESC_BROCCOLI")
                             .type(MascotType.BASE)
                             .rarity(MascotRarity.COMMON)
                             .price(0)
@@ -38,6 +39,7 @@ public class MascotSeeder implements CommandLineRunner {
 
                     Mascot.builder()
                             .name("MASCOT_SLIMEY")
+                            .description("DESC_SLIMEY")
                             .type(MascotType.BASE)
                             .rarity(MascotRarity.COMMON)
                             .price(100)
@@ -49,6 +51,7 @@ public class MascotSeeder implements CommandLineRunner {
 
                     Mascot.builder()
                             .name("MASCOT_CHESSY")
+                            .description("DESC_CHESSY")
                             .type(MascotType.BASE)
                             .rarity(MascotRarity.RARE)
                             .price(200)
@@ -60,6 +63,7 @@ public class MascotSeeder implements CommandLineRunner {
 
                     Mascot.builder()
                             .name("MASCOT_PEPPY")
+                            .description("DESC_PEPPY")
                             .type(MascotType.BASE)
                             .rarity(MascotRarity.RARE)
                             .price(300)
@@ -71,6 +75,7 @@ public class MascotSeeder implements CommandLineRunner {
 
                     Mascot.builder()
                             .name("MASCOT_FROSTY")
+                            .description("DESC_FROSTY")
                             .type(MascotType.BASE)
                             .rarity(MascotRarity.EPIC)
                             .price(500)
@@ -82,6 +87,7 @@ public class MascotSeeder implements CommandLineRunner {
 
                     Mascot.builder()
                             .name("MASCOT_OVEN")
+                            .description("DESC_OVEN")
                             .type(MascotType.BASE)
                             .rarity(MascotRarity.EPIC)
                             .price(500)
@@ -93,6 +99,7 @@ public class MascotSeeder implements CommandLineRunner {
 
                     Mascot.builder()
                             .name("MASCOT_CAULDRON")
+                            .description("DESC_CAULDRON")
                             .type(MascotType.BASE)
                             .rarity(MascotRarity.EPIC)
                             .price(800)
@@ -104,6 +111,7 @@ public class MascotSeeder implements CommandLineRunner {
 
                     Mascot.builder()
                             .name("MASCOT_KNIGHT")
+                            .description("DESC_KNIGHT")
                             .type(MascotType.BASE)
                             .rarity(MascotRarity.LEGENDARY)
                             .price(1500)

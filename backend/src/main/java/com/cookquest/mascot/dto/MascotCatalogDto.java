@@ -1,8 +1,9 @@
 package com.cookquest.mascot.dto;
 
-public record MascotCatalogDto(
+public record MascotCatalogDto (
         Long id,
         String name,
+        String description, // Додано
         String type,
         String imageUrlHappy,
         String imageUrlNeutral,
