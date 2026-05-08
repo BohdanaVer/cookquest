@@ -10,4 +10,6 @@ public interface LevelRepository extends JpaRepository<Level, Long> {
     Optional<Level> findFirstByRequiredXpLessThanEqualOrderByRequiredXpDesc(Integer requiredXp);
 
     Optional<Level> findByLevelNumber(Integer levelNumber);
+
+    java.util.Optional<Level> findFirstByRequiredXpGreaterThanOrderByRequiredXpAsc(Integer currentXp);
 }

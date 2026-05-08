@@ -92,7 +92,7 @@ public class ProfileService {
 
         profile.setXp(profile.getXp() + amount);
         profile.setRatingScore(profile.getRatingScore() + amount);
-        
+
         checkLevelUp(profile);
 
         profileRepository.save(profile);
@@ -118,7 +118,7 @@ public class ProfileService {
 
     private void checkLevelUp(UserProfile profile) {
         Level targetLevel = levelRepository.findFirstByRequiredXpLessThanEqualOrderByRequiredXpDesc(profile.getXp())
-                .orElseThrow(() -> new RuntimeException("Системна помилка: рівні не налаштовані в БД"));
+                .orElseThrow(() -> new AppException(ErrorCode.LEVELS_NOT_CONFIGURED, "Системна помилка: рівні не налаштовані в БД", HttpStatus.INTERNAL_SERVER_ERROR));
 
         if (profile.getLevel() == null || !profile.getLevel().getId().equals(targetLevel.getId())) {
             profile.setLevel(targetLevel);
@@ -177,12 +177,19 @@ public class ProfileService {
             }
         }
 
+        int currentLevelXp = p.getLevel() != null ? p.getLevel().getRequiredXp() : 0;
+        int nextLevelXp = levelRepository.findFirstByRequiredXpGreaterThanOrderByRequiredXpAsc(p.getXp())
+                .map(Level::getRequiredXp)
+                .orElse(currentLevelXp); // Якщо наступного рівня немає, ставимо ліміт = поточному рівню
+
         return new UserProfileResponse(
                 p.getId(),
                 p.getUser().getUsername(),
                 p.getXp(),
                 p.getLevel() != null ? p.getLevel().getLevelNumber() : 1,
                 p.getLevel() != null ? p.getLevel().getName() : "Новачок",
+                currentLevelXp,
+                nextLevelXp,
                 p.getBalance(),
                 p.getRatingScore(),
                 p.getLanguage(),

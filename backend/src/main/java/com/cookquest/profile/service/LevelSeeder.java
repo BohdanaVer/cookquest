@@ -1,4 +1,4 @@
-package com.cookquest.profile.config;
+package com.cookquest.profile.service;
 
 import com.cookquest.profile.entity.Level;
 import com.cookquest.profile.repository.LevelRepository;
