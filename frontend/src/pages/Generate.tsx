@@ -10,6 +10,12 @@ import { useActiveMascot } from '../components/mascot-provider'
 import { useTranslation } from 'react-i18next'
 import { api } from '../api/axiosClient'
 
+interface UserProfileData {
+    activeMascotImageUrlHappy?: string;
+    activeMascotImageUrlNeutral?: string;
+    activeMascotImageUrlSad?: string;
+}
+
 type MascotName = "broccoli" | "slime" | "cheese" | "pepper" | "icecream" | "stove" | "cauldron" | "knightpan";
 
 export interface Recipe {
@@ -45,9 +51,16 @@ export default function Generate() {
     const [excluded, setExcluded] = useState<Set<string>>(() => new Set(JSON.parse(sessionStorage.getItem('gen_excluded') || '[]')))
     const [recipes, setRecipes] = useState<Recipe[]>(() => JSON.parse(sessionStorage.getItem('gen_recipes') || '[]'))
     const [expandedRecipeId, setExpandedRecipeId] = useState<string | null>(null)
+    const [user, setUser] = useState<UserProfileData | null>(null)
 
     const cameraInputRef = useRef<HTMLInputElement>(null)
     const galleryInputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => {
+        api.get('/api/v1/profiles/me')
+            .then(res => setUser(res.data))
+            .catch(err => console.error(err))
+    }, [])
 
     useEffect(() => {
         sessionStorage.setItem('gen_mode', mode)
@@ -168,7 +181,18 @@ export default function Generate() {
                 </button>
 
                 <div className="flex justify-center mb-6">
-                    <Mascot name={activeMascot as MascotName} mood="happy" size={80} message={t('generate.mascotSelect', 'Обери рецепт!')} animation="pop" />
+                    <Mascot 
+                        name={activeMascot as MascotName} 
+                        mood="happy" 
+                        size={80} 
+                        message={t('generate.mascotSelect', 'Обери рецепт!')} 
+                        animation="pop" 
+                        customImageUrls={{
+                            happy: user?.activeMascotImageUrlHappy,
+                            neutral: user?.activeMascotImageUrlNeutral,
+                            sad: user?.activeMascotImageUrlSad
+                        }}
+                    />
                 </div>
 
                 <div className="space-y-4">
@@ -241,7 +265,18 @@ export default function Generate() {
                 </button>
 
                 <div className="flex justify-center">
-                    <Mascot name={activeMascot as MascotName} mood="happy" size={80} message={t('generate.mascotFound', 'Я знайшов ці інгредієнти!')} animation="pop" />
+                    <Mascot 
+                        name={activeMascot as MascotName} 
+                        mood="happy" 
+                        size={80} 
+                        message={t('generate.mascotFound', 'Я знайшов ці інгредієнти!')} 
+                        animation="pop" 
+                        customImageUrls={{
+                            happy: user?.activeMascotImageUrlHappy,
+                            neutral: user?.activeMascotImageUrlNeutral,
+                            sad: user?.activeMascotImageUrlSad
+                        }}
+                    />
                 </div>
 
                 <div className="bg-[#1a1a2e] rounded-2xl border border-white/5 p-5">
@@ -288,7 +323,18 @@ export default function Generate() {
     return (
         <div className="space-y-8 animate-in fade-in duration-500 pb-10">
             <div className="flex justify-center">
-                <Mascot name={activeMascot as MascotName} mood="neutral" size={90} message={t('generate.mascotStart', 'Що приготуємо?')} animation="pop" />
+                <Mascot 
+                    name={activeMascot as MascotName} 
+                    mood="neutral" 
+                    size={90} 
+                    message={t('generate.mascotStart', 'Що приготуємо?')} 
+                    animation="pop" 
+                    customImageUrls={{
+                        happy: user?.activeMascotImageUrlHappy,
+                        neutral: user?.activeMascotImageUrlNeutral,
+                        sad: user?.activeMascotImageUrlSad
+                    }}
+                />
             </div>
 
             <div className="space-y-5">

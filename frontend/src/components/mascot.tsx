@@ -25,6 +25,11 @@ interface MascotProps {
   random?: boolean
   interactive?: boolean
   delay?: number
+  customImageUrls?: {
+    happy?: string
+    neutral?: string
+    sad?: string
+  }
 }
 
 // --- Framer Motion Variants ---
@@ -111,6 +116,7 @@ export default function Mascot({
   random = false,
   interactive = true,
   delay = 0,
+  customImageUrls,
 }: MascotProps) {
   const [randomName] = useState<MascotName>(() => 
     MASCOTS[Math.floor(Math.random() * MASCOTS.length)]
@@ -131,7 +137,16 @@ export default function Mascot({
     setTimeout(() => setInteractionMood(null), 800);
   }, [interactive, controls]);
 
-  const src = `/mascots/${mascotName}_${currentMood}.png`;
+  const getSrc = (moodName: Mood) => {
+    if (customImageUrls) {
+      if (moodName === 'happy' && customImageUrls.happy) return customImageUrls.happy;
+      if (moodName === 'sad' && customImageUrls.sad) return customImageUrls.sad;
+      if (customImageUrls.neutral) return customImageUrls.neutral;
+    }
+    return `/mascots/${mascotName}_${moodName}.png`;
+  };
+
+  const src = getSrc(currentMood);
 
   const getAnimationVariant = () => {
     switch (animation) {
@@ -204,8 +219,18 @@ export function MascotStatic({
   size = 120,
   message,
   className = '',
+  customImageUrls,
 }: Omit<MascotProps, 'animation' | 'random' | 'interactive' | 'delay'>) {
-  const src = `/mascots/${name}_${mood}.png`
+  const getSrc = (moodName: Mood) => {
+    if (customImageUrls) {
+      if (moodName === 'happy' && customImageUrls.happy) return customImageUrls.happy;
+      if (moodName === 'sad' && customImageUrls.sad) return customImageUrls.sad;
+      if (customImageUrls.neutral) return customImageUrls.neutral;
+    }
+    return `/mascots/${name}_${moodName}.png`;
+  };
+
+  const src = getSrc(mood);
 
   return (
     <div className={`flex flex-col items-center gap-2 ${className}`}>

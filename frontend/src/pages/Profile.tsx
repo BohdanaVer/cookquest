@@ -38,6 +38,9 @@ interface UserProfileData {
     rating_score?: number;
     activeMascot?: string;
     language?: string;
+    activeMascotImageUrlHappy?: string;
+    activeMascotImageUrlNeutral?: string;
+    activeMascotImageUrlSad?: string;
     dietaryPreferences?: {
         diet?: string;
         allergens?: string[];
@@ -209,7 +212,7 @@ export default function Profile() {
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center">
                             <img
-                                src={`/mascots/${activeMascot}_happy.png`}
+                                src={user?.activeMascotImageUrlNeutral || `/mascots/${activeMascot}_happy.png`}
                                 alt="mascot"
                                 className="w-10 h-10 drop-shadow-md object-contain"
                             />
@@ -220,7 +223,7 @@ export default function Profile() {
                             {loading ? t('profile.loading', 'Завантаження...') : user?.username}
                         </h1>
                         <p className="text-xs text-gray-400">
-                            {user?.levelName || t('profile.rank')} • {t('profile.level')} {user?.level || 0}
+                            {user?.levelName ? t(`ranks.rank${user.levelName.replace('LEVEL_', '')}`) : t('profile.rank')} • {t('profile.level')} {user?.level || 0}
                         </p>
                         <div className="mt-2 flex items-center gap-1.5">
                             <Zap size={12} className="text-green-400" />
@@ -314,7 +317,17 @@ export default function Profile() {
                     </div>
                 ) : savedRecipes.length === 0 ? (
                     <div className="py-4 text-center">
-                        <MascotStatic name={activeMascot as MascotName} mood="neutral" size={100} message={t('profile.noRecipes', 'Немає збережених рецептів')} />
+                        <MascotStatic 
+                            name={activeMascot as MascotName} 
+                            mood="neutral" 
+                            size={100} 
+                            message={t('profile.noRecipes', 'Немає збережених рецептів')} 
+                            customImageUrls={{
+                                happy: user?.activeMascotImageUrlHappy,
+                                neutral: user?.activeMascotImageUrlNeutral,
+                                sad: user?.activeMascotImageUrlSad
+                            }}
+                        />
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -354,7 +367,16 @@ export default function Profile() {
                     {t('profile.myMascot', 'Мій Маскот')}
                 </h2>
                 <div className="flex items-center gap-4">
-                    <MascotStatic name={activeMascot as MascotName} mood="happy" size={64} />
+                    <MascotStatic 
+                        name={activeMascot as MascotName} 
+                        mood="happy" 
+                        size={64} 
+                        customImageUrls={{
+                            happy: user?.activeMascotImageUrlHappy,
+                            neutral: user?.activeMascotImageUrlNeutral,
+                            sad: user?.activeMascotImageUrlSad
+                        }}
+                    />
                     <div>
                         <p className="font-bold text-white">{t('profile.mascotName', 'Компаньйон')}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{t('profile.mascotDesc', 'Допомагає на кухні')}</p>

@@ -18,6 +18,7 @@ interface LeaderboardEntry {
     levelNumber: number;
     levelName: string;
     activeMascotId: number;
+    activeMascotImageUrlNeutral?: string;
 }
 
 const getMascotName = (id: number) => {
@@ -50,7 +51,7 @@ const ListItem = ({
 
             <div className="w-12 h-12 rounded-2xl bg-[#2a2a40] flex items-center justify-center shrink-0 overflow-hidden border border-white/5">
                 <img
-                    src={`/mascots/${mascotName}_happy.png`}
+                    src={user.activeMascotImageUrlNeutral || `/mascots/${mascotName}_happy.png`}
                     alt={mascotName}
                     className="w-8 h-8 object-contain"
                     onError={(e) => { e.currentTarget.src = '/mascots/broccoli_happy.png' }}
@@ -91,11 +92,22 @@ export default function Leaderboard() {
                     api.get('/api/v1/profiles/me').catch(() => ({ data: null }))
                 ]);
 
-                setLeaders(leaderboardRes.data || []);
+                let fetchedLeaders = leaderboardRes.data || [];
 
                 if (profileRes.data && profileRes.data.username) {
                     setMyUsername(profileRes.data.username);
+
+                    if (profileRes.data.activeMascotImageUrlNeutral) {
+                        fetchedLeaders = fetchedLeaders.map((u: LeaderboardEntry) => {
+                            if (u.username === profileRes.data.username) {
+                                return { ...u, activeMascotImageUrlNeutral: profileRes.data.activeMascotImageUrlNeutral };
+                            }
+                            return u;
+                        });
+                    }
                 }
+
+                setLeaders(fetchedLeaders);
             } catch (error) {
                 console.error("Помилка завантаження рейтингу:", error);
             } finally {
@@ -163,7 +175,7 @@ export default function Leaderboard() {
                         {secondPlace && (
                             <div className="flex flex-col items-center pb-2 animate-slide-up" style={{ animationDelay: '0.1s' }}>
                                 <div className="w-16 h-16 rounded-3xl bg-[#2a2a40] border-2 border-gray-400 flex items-center justify-center mb-3 shadow-lg shadow-gray-400/20">
-                                    <img src={`/mascots/${getMascotName(secondPlace.activeMascotId)}_happy.png`} alt="" className="w-10 h-10 object-contain" />
+                                    <img src={secondPlace.activeMascotImageUrlNeutral || `/mascots/${getMascotName(secondPlace.activeMascotId)}_happy.png`} alt="" className="w-10 h-10 object-contain" />
                                 </div>
                                 <span className="text-white font-bold text-xs mb-1 truncate max-w-[80px]">{secondPlace.username}</span>
                                 <div className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded-lg border border-white/10">
@@ -176,7 +188,7 @@ export default function Leaderboard() {
                         {firstPlace && (
                             <div className="flex flex-col items-center z-10 animate-slide-up" style={{ animationDelay: '0s' }}>
                                 <div className="w-20 h-20 rounded-3xl bg-[#2a2a40] border-2 border-yellow-400 flex items-center justify-center mb-3 shadow-xl shadow-yellow-500/30 ring-4 ring-yellow-500/10">
-                                    <img src={`/mascots/${getMascotName(firstPlace.activeMascotId)}_happy.png`} alt="" className="w-12 h-12 object-contain drop-shadow-md" />
+                                    <img src={firstPlace.activeMascotImageUrlNeutral || `/mascots/${getMascotName(firstPlace.activeMascotId)}_happy.png`} alt="" className="w-12 h-12 object-contain drop-shadow-md" />
                                 </div>
                                 <span className="text-yellow-400 font-extrabold text-sm mb-1 truncate max-w-[90px]">{firstPlace.username}</span>
                                 <div className="flex items-center gap-1 bg-yellow-500/10 px-3 py-1 rounded-lg border border-yellow-500/20">
@@ -189,7 +201,7 @@ export default function Leaderboard() {
                         {thirdPlace && (
                             <div className="flex flex-col items-center pb-2 animate-slide-up" style={{ animationDelay: '0.2s' }}>
                                 <div className="w-16 h-16 rounded-3xl bg-[#2a2a40] border-2 border-amber-600 flex items-center justify-center mb-3 shadow-lg shadow-amber-600/20">
-                                    <img src={`/mascots/${getMascotName(thirdPlace.activeMascotId)}_happy.png`} alt="" className="w-10 h-10 object-contain" />
+                                    <img src={thirdPlace.activeMascotImageUrlNeutral || `/mascots/${getMascotName(thirdPlace.activeMascotId)}_happy.png`} alt="" className="w-10 h-10 object-contain" />
                                 </div>
                                 <span className="text-white font-bold text-xs mb-1 truncate max-w-[80px]">{thirdPlace.username}</span>
                                 <div className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded-lg border border-white/10">

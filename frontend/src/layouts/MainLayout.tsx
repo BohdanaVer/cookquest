@@ -10,6 +10,9 @@ interface UserProfileData {
   ratingScore?: number;
   rating_score?: number;
   activeMascot?: string;
+  activeMascotImageUrlHappy?: string;
+  activeMascotImageUrlNeutral?: string;
+  activeMascotImageUrlSad?: string;
 }
 
 export default function MainLayout() {
@@ -78,10 +81,9 @@ export default function MainLayout() {
                   </div>
                 </div>
 
-                {/* Аватар маскота тепер оновлюється автоматично */}
                 <Link to="/profile" className="w-8 h-8 rounded-full overflow-hidden border-2 border-orange-500/30 hover:border-orange-500 transition-all flex-shrink-0 bg-white/5">
                   <img
-                      src={`/mascots/${activeMascot}_happy.png`}
+                      src={user?.activeMascotImageUrlNeutral || `/mascots/${activeMascot}_happy.png`}
                       alt="profile"
                       className="w-full h-full object-cover"
                       onError={(e) => { e.currentTarget.src = '/mascots/broccoli_happy.png' }}

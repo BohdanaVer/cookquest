@@ -19,6 +19,9 @@ interface UserProfileData {
   ratingScore?: number;
   rating_score?: number;
   activeMascot?: string;
+  activeMascotImageUrlHappy?: string;
+  activeMascotImageUrlNeutral?: string;
+  activeMascotImageUrlSad?: string;
 }
 
 interface CookingSessionDto {
@@ -106,6 +109,11 @@ export default function Home() {
               mood="happy"
               size={100}
               message={loading ? t('home.loading') : t('home.welcome', { name: username })}
+              customImageUrls={{
+                  happy: user?.activeMascotImageUrlHappy,
+                  neutral: user?.activeMascotImageUrlNeutral,
+                  sad: user?.activeMascotImageUrlSad
+              }}
           />
         </div>
 
@@ -120,7 +128,7 @@ export default function Home() {
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <img src={`/mascots/${activeMascot}_happy.png`} alt="" className="w-[60px] h-[60px] object-contain drop-shadow-md" />
+                <img src={user?.activeMascotImageUrlNeutral || `/mascots/${activeMascot}_happy.png`} alt="" className="w-[60px] h-[60px] object-contain drop-shadow-md" />
               </div>
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-lg">
                 LVL {displayLevel}
@@ -132,7 +140,7 @@ export default function Home() {
                 {loading ? t('home.loading') : username}
               </h1>
               <p className="text-xs text-gray-400 font-medium">
-                {levelInfo?.name || t('home.defaultRank')}
+                {user?.levelName ? t(`ranks.rank${user.levelName.replace('LEVEL_', '')}`) : t('home.defaultRank')}
               </p>
               <div className="mt-2 flex items-center gap-1.5">
                 <Zap size={12} className="text-green-400" />

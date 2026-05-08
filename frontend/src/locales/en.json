@@ -46,7 +46,6 @@
     "saveError": "Error while saving",
     "saving": "Saving..."
   },
-
   "MASCOT_BROCCOLI": "Broccoli",
   "DESC_BROCCOLI": "Sporty and healthy, will give you energy!",
   "MASCOT_SLIMEY": "Slimey",
@@ -63,7 +62,6 @@
   "DESC_CAULDRON": "A mystical cauldron for magical soups.",
   "MASCOT_KNIGHT": "Knight Pan",
   "DESC_KNIGHT": "A brave defender of your kitchen.",
-
   "shop": {
     "title": "Shop",
     "balance": "Balance:",
@@ -116,13 +114,11 @@
       "equip": "Equip"
     }
   },
-
   "leaderboard": {
     "title": "Leaderboard",
     "yourRank": "Your rank:",
     "noParticipants": "No participants yet"
   },
-
   "friends": {
     "title": "Friends",
     "friendsCount": "{{count}} friends",
@@ -132,7 +128,6 @@
     "noFriendsTitle": "You don't have any friends yet.",
     "noFriendsSub": "Use the search above to find them!"
   },
-
   "generate": {
     "mascotSelect": "Choose a recipe!",
     "mascotFound": "Here is what I found!",
@@ -154,7 +149,6 @@
       "hard": "Hard"
     }
   },
-
   "home": {
     "loading": "Loading...",
     "welcome": "Hello, {{name}}!",
@@ -176,7 +170,6 @@
     "leaderboard": "Leaderboard",
     "yourRating": "Your rating: #{{score}}"
   },
-
   "nav": {
     "home": "Home",
     "recipes": "Recipes",
@@ -185,7 +178,6 @@
     "shop": "Shop",
     "friends": "Friends"
   },
-
   "quests": {
     "title": "Quests",
     "subtitle": "Complete tasks and earn experience",
@@ -265,5 +257,17 @@
     "battleBtn": "Battle",
     "battleDisabledInQuest": "Battles are disabled for quest recipes!",
     "battleInDev": "Battle mode is still in development!"
+  },
+  "ranks": {
+    "rank1": "Kitchen Novice",
+    "rank2": "Apprentice Cook",
+    "rank3": "Culinary Enthusiast",
+    "rank4": "Skilled Cook",
+    "rank5": "Sous-Chef",
+    "rank6": "Head Chef",
+    "rank7": "Taste Virtuoso",
+    "rank8": "Master Chef",
+    "rank9": "Culinary Grandmaster",
+    "rank10": "Kitchen Legend"
   }
 }
