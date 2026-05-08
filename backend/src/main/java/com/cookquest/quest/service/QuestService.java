@@ -1,5 +1,7 @@
 package com.cookquest.quest.service;
 
+import com.cookquest.common.exception.AppException;
+import com.cookquest.common.exception.ErrorCode;
 import com.cookquest.quest.dto.QuestRequestDto;
 import com.cookquest.quest.dto.QuestResponseDto;
 import com.cookquest.quest.dto.WeekRequestDto;
@@ -9,6 +11,7 @@ import com.cookquest.quest.repository.DayRepository;
 import com.cookquest.quest.repository.QuestRepository;
 import com.cookquest.quest.repository.WeekRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,7 +43,7 @@ public class QuestService {
         LocalDate startDate = request.startDate();
 
         if (startDate.getDayOfWeek() != DayOfWeek.MONDAY) {
-            throw new RuntimeException("Дата початку тижня має бути виключно понеділком!");
+            throw new AppException(ErrorCode.INVALID_WEEK_START_DATE, "Дата початку тижня має бути виключно понеділком!", HttpStatus.BAD_REQUEST);
         }
 
         Week week = Week.builder()
@@ -68,7 +71,7 @@ public class QuestService {
     @Transactional
     public Quest createQuest(QuestRequestDto request) {
         Day day = dayRepository.findById(request.dayId())
-                .orElseThrow(() -> new RuntimeException("День не знайдено з id: " + request.dayId()));
+                .orElseThrow(() -> new AppException(ErrorCode.DAY_NOT_FOUND, "День не знайдено з id: " + request.dayId(), HttpStatus.NOT_FOUND));
 
         Quest quest = Quest.builder()
                 .recipeId(request.recipeId())
@@ -83,10 +86,10 @@ public class QuestService {
     @Transactional
     public Quest updateQuest(Long id, QuestRequestDto request) {
         Quest quest = questRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Квест не знайдено з id: " + id));
+                .orElseThrow(() -> new AppException(ErrorCode.QUEST_NOT_FOUND, "Квест не знайдено з id: " + id, HttpStatus.NOT_FOUND));
 
         Day day = dayRepository.findById(request.dayId())
-                .orElseThrow(() -> new RuntimeException("День не знайдено з id: " + request.dayId()));
+                .orElseThrow(() -> new AppException(ErrorCode.DAY_NOT_FOUND, "День не знайдено з id: " + request.dayId(), HttpStatus.NOT_FOUND));
 
         quest.setRecipeId(request.recipeId());
         quest.setXpMultiplier(request.xpMultiplier() != null ? request.xpMultiplier() : 1.0);
@@ -99,7 +102,7 @@ public class QuestService {
     @Transactional
     public void deleteQuest(Long id) {
         if (!questRepository.existsById(id)) {
-            throw new RuntimeException("Квест не знайдено з id: " + id);
+            throw new AppException(ErrorCode.QUEST_NOT_FOUND, "Квест не знайдено з id: " + id, HttpStatus.NOT_FOUND);
         }
         questRepository.deleteById(id);
     }

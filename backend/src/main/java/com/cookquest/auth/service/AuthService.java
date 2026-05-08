@@ -66,7 +66,7 @@ public class AuthService {
         // 1. Дістаємо 1-й рівень з БД
         Level defaultLevel = levelRepository.findByLevelNumber(1)
                 .orElseThrow(() -> new AppException(
-                        ErrorCode.INTERNAL_ERROR,
+                        ErrorCode.LEVELS_NOT_CONFIGURED,
                         "Критична помилка: Базовий рівень (1) не знайдено в БД",
                         HttpStatus.INTERNAL_SERVER_ERROR
                 ));
@@ -74,7 +74,7 @@ public class AuthService {
         // 2. Дістаємо стартового маскота за його унікальним ключем
         Mascot starterMascot = mascotRepository.findByName("MASCOT_BROCCOLI")
                 .orElseThrow(() -> new AppException(
-                        ErrorCode.INTERNAL_ERROR,
+                        ErrorCode.STARTER_MASCOT_NOT_FOUND,
                         "Критична помилка: Стартовий маскот не знайдений у БД",
                         HttpStatus.INTERNAL_SERVER_ERROR
                 ));
@@ -126,8 +126,8 @@ public class AuthService {
 
             if (!(authentication.getPrincipal() instanceof CustomUserDetails userDetails)) {
                 throw new AppException(
-                        ErrorCode.USER_NOT_FOUND,
-                        "Помилка авторизації: невірний тип Principal",
+                        ErrorCode.INVALID_PRINCIPAL_TYPE,
+                        "Помилка авторизації: невірний тип об'єкта користувача",
                         HttpStatus.INTERNAL_SERVER_ERROR
                 );
             }

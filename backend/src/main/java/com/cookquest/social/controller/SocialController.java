@@ -3,13 +3,13 @@ package com.cookquest.social.controller;
 import com.cookquest.social.dto.FriendDto;
 import com.cookquest.social.dto.FriendRequestDto;
 import com.cookquest.social.dto.SendFriendRequest;
+import com.cookquest.social.dto.UserSearchDto;
 import com.cookquest.social.service.FriendshipService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/friends")
@@ -44,5 +44,15 @@ public class SocialController {
     @GetMapping("/requests")
     public ResponseEntity<List<FriendRequestDto>> getRequests() {
         return ResponseEntity.ok(friendshipService.getPendingRequests());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<UserSearchDto>> searchUsers(@RequestParam String query) {
+        return ResponseEntity.ok(friendshipService.searchUsers(query));
+    }
+
+    @GetMapping("/suggestions")
+    public ResponseEntity<List<UserSearchDto>> getSuggestions() {
+        return ResponseEntity.ok(friendshipService.getSuggestions(10));
     }
 }

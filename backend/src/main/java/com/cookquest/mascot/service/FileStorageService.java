@@ -1,8 +1,11 @@
 package com.cookquest.mascot.service;
 
 import com.cloudinary.Cloudinary;
+import com.cookquest.common.exception.AppException;
+import com.cookquest.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -16,18 +19,21 @@ public class FileStorageService {
 
     private final Cloudinary cloudinary;
 
-    public String saveImageToCloud(byte[] imageBytes, String folder, String fileName) throws IOException {
-        Map<String, Object> params = new HashMap<>();
+    public String saveImageToCloud(byte[] imageBytes, String folder, String fileName) {
+        try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("folder", folder);
+            params.put("public_id", fileName);
 
-        params.put("folder", folder);
+            Map uploadResult = cloudinary.uploader().upload(imageBytes, params);
 
-        params.put("public_id", fileName);
+            String secureUrl = uploadResult.get("secure_url").toString();
+            log.info("Файл успішно завантажено в Cloudinary: {}", secureUrl);
 
-        Map uploadResult = cloudinary.uploader().upload(imageBytes, params);
-
-        String secureUrl = uploadResult.get("secure_url").toString();
-        log.info("Файл успішно завантажено в Cloudinary: {}", secureUrl);
-
-        return secureUrl;
+            return secureUrl;
+        } catch (IOException e) {
+            log.error("Помилка завантаження файлу в Cloudinary", e);
+            throw new AppException(ErrorCode.CLOUD_STORAGE_ERROR, "Не вдалося зберегти зображення у хмару", HttpStatus.SERVICE_UNAVAILABLE);
+        }
     }
 }

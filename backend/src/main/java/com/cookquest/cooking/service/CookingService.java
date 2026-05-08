@@ -99,8 +99,8 @@ public class CookingService {
             } catch (DataIntegrityViolationException e) {
                 log.warn("Батч {} вже використано юзером {}", recipe.batchId(), user.getId());
                 throw new AppException(
-                        ErrorCode.INVALID_REQUEST,
-                        "Ви вже почали готувати рецепт з цієї генерації",
+                        ErrorCode.BATCH_ALREADY_USED,
+                        "Ви вже почали готувати рецепт з цієї генерації. Згенеруйте нові рецепти для отримання повного XP.",
                         HttpStatus.BAD_REQUEST);
             }
         }
@@ -139,7 +139,7 @@ public class CookingService {
         CookingSession session = getActiveSessionStrict(sessionId);
 
         if (session.getXpMode() == XpMode.NONE) {
-            throw new AppException(ErrorCode.INVALID_REQUEST,
+            throw new AppException(ErrorCode.STEP_VERIFICATION_NOT_ALLOWED_IN_VIEW_MODE,
                     "Цей рецепт відкрито у режимі перегляду. Перевірка кроків для нього недоступна.",
                     HttpStatus.BAD_REQUEST);
         }
@@ -193,19 +193,19 @@ public class CookingService {
             boolean isFinalStep) {
         int stepIndex = stepNumber - 1;
         if (stepIndex < 0 || stepIndex >= totalSteps) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Неправильний номер кроку", HttpStatus.BAD_REQUEST);
+            throw new AppException(ErrorCode.INVALID_STEP_NUMBER, "Неправильний номер кроку", HttpStatus.BAD_REQUEST);
         }
 
         if (file != null && !file.isEmpty()) {
             if (session.getXpMode() == XpMode.REDUCED && !isFinalStep) {
-                throw new AppException(ErrorCode.INVALID_REQUEST,
+                throw new AppException(ErrorCode.PHOTO_ONLY_ALLOWED_ON_FINAL_STEP,
                         "У цьому режимі фото приймається ЛИШЕ на фінальному кроці.", HttpStatus.BAD_REQUEST);
             }
         }
 
         String[] verified = session.getVerifiedSteps().split(",");
         if (java.util.Arrays.asList(verified).contains(String.valueOf(stepNumber))) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Цей крок вже оцінено", HttpStatus.BAD_REQUEST);
+            throw new AppException(ErrorCode.STEP_ALREADY_VERIFIED, "Цей крок вже оцінено", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -232,7 +232,7 @@ public class CookingService {
         }
 
         if (file == null || file.isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Фото обов'язкове!", HttpStatus.BAD_REQUEST);
+            throw new AppException(ErrorCode.NO_PHOTOS_PROVIDED, "Фото обов'язкове!", HttpStatus.BAD_REQUEST);
         }
 
         String stepDesc = currentStep.path("text").asText();
@@ -313,19 +313,19 @@ public class CookingService {
     private CookingSession getActiveSessionStrict(Long sessionId) {
         CookingSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(
-                        () -> new AppException(ErrorCode.INVALID_REQUEST, "Сесію не знайдено", HttpStatus.NOT_FOUND));
+                        () -> new AppException(ErrorCode.SESSION_NOT_FOUND, "Сесію не знайдено", HttpStatus.NOT_FOUND));
 
         User currentUser = getCurrentUser();
         boolean isOwner = session.getUser().getId().equals(currentUser.getId());
         boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
 
         if (!isOwner && !isAdmin) {
-            throw new AppException(ErrorCode.SECURITY_VIOLATION, "Відмовлено в доступі. Це не ваша сесія.",
+            throw new AppException(ErrorCode.NOT_SESSION_OWNER, "Відмовлено в доступі. Це не ваша сесія.",
                     HttpStatus.FORBIDDEN);
         }
 
         if (session.getStatus() != SessionStatus.IN_PROGRESS) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Сесія не активна", HttpStatus.BAD_REQUEST);
+            throw new AppException(ErrorCode.SESSION_NOT_ACTIVE, "Сесія не активна або вже завершена", HttpStatus.BAD_REQUEST);
         }
 
         return session;
@@ -344,10 +344,7 @@ public class CookingService {
                     .build();
         } catch (Exception e) {
             log.error("Помилка десеріалізації рецепта для DTO", e);
-            throw new AppException(
-                    ErrorCode.INTERNAL_SERVER_ERROR,
-                    "Помилка обробки даних рецепта",
-                    HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new AppException(ErrorCode.RECIPE_PARSE_ERROR, "Помилка читання даних рецепта", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -358,7 +355,7 @@ public class CookingService {
                 case "uk" -> "Ukrainian";
                 case "en" -> "English";
                 default -> throw new AppException(
-                        ErrorCode.INVALID_REQUEST,
+                        ErrorCode.UNSUPPORTED_LANGUAGE,
                         "Непідтримувана мова: '" + requestLang + "'. Доступні варіанти: 'uk', 'en'.",
                         HttpStatus.BAD_REQUEST);
             };

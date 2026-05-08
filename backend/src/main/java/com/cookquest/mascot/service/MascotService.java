@@ -86,18 +86,18 @@ public class MascotService {
     public MascotCatalogDto buyMascot(Long mascotId) {
         Long userId = getCurrentUserId();
         Mascot mascot = mascotRepository.findById(mascotId)
-                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Маскота не знайдено", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.MASCOT_NOT_FOUND, "Маскота не знайдено", HttpStatus.NOT_FOUND));
 
         if (mascot.getType() != MascotType.BASE) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Цей маскот не продається", HttpStatus.BAD_REQUEST);
+            throw new AppException(ErrorCode.MASCOT_NOT_FOR_SALE, "Цей маскот не продається", HttpStatus.BAD_REQUEST);
         }
 
         if (userMascotRepository.existsByUserIdAndMascotId(userId, mascotId)) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Ви вже володієте цим маскотом", HttpStatus.BAD_REQUEST);
+            throw new AppException(ErrorCode.MASCOT_ALREADY_OWNED, "Ви вже володієте цим маскотом", HttpStatus.BAD_REQUEST);
         }
 
         if (!economyMascotApi.hasEnoughCoins(userId, mascot.getPrice())) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Недостатньо монет", HttpStatus.BAD_REQUEST);
+            throw new AppException(ErrorCode.INSUFFICIENT_COINS, "Недостатньо монет", HttpStatus.BAD_REQUEST);
         }
 
         economyMascotApi.deductCoins(userId, mascot.getPrice());
@@ -126,9 +126,9 @@ public class MascotService {
     @Transactional
     public void setActiveMascot(Long mascotId) {
         Long userId = getCurrentUserId();
-        
+
         if (!userMascotRepository.existsByUserIdAndMascotId(userId, mascotId)) {
-            throw new AppException(ErrorCode.SECURITY_VIOLATION, "Ви не володієте цим маскотом", HttpStatus.FORBIDDEN);
+            throw new AppException(ErrorCode.MASCOT_NOT_OWNED, "Ви не володієте цим маскотом", HttpStatus.FORBIDDEN);
         }
 
         profileMascotApi.updateActiveMascot(userId, mascotId);
@@ -143,8 +143,8 @@ public class MascotService {
 
         if (!economyMascotApi.hasEnoughCoins(userId, generationPrice)) {
             throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    "Недостатньо монет для генерації. Потрібно: " + generationPrice,
+                    ErrorCode.INSUFFICIENT_COINS,
+                    "Недостатньо монет для генерації",
                     HttpStatus.BAD_REQUEST
             );
         }
@@ -212,7 +212,7 @@ public class MascotService {
         } catch (Exception e) {
             log.error("Помилка генерації маскота", e);
             Throwable cause = e.getCause() != null ? e.getCause() : e;
-            throw new AppException(ErrorCode.INTERNAL_ERROR, "Помилка генерації: " + cause.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new AppException(ErrorCode.MASCOT_GENERATION_FAILED, "Помилка генерації: " + cause.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 */
@@ -226,8 +226,8 @@ public class MascotService {
 
         if (!economyMascotApi.hasEnoughCoins(userId, generationPrice)) {
             throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    "Недостатньо монет для генерації. Потрібно: " + generationPrice,
+                    ErrorCode.INSUFFICIENT_COINS,
+                    "Недостатньо монет для генерації",
                     HttpStatus.BAD_REQUEST
             );
         }
@@ -281,9 +281,9 @@ public class MascotService {
             Thread.currentThread().interrupt();
             throw new AppException(ErrorCode.INTERNAL_ERROR, "Перервано очікування MOCK-генерації", HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
-            log.error("Помилка генерації маскота (Mock)", e);
+            log.error("Помилка генерації маскота", e);
             Throwable cause = e.getCause() != null ? e.getCause() : e;
-            throw new AppException(ErrorCode.INTERNAL_ERROR, "Помилка генерації: " + cause.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new AppException(ErrorCode.MASCOT_GENERATION_FAILED, "Помилка генерації: " + cause.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

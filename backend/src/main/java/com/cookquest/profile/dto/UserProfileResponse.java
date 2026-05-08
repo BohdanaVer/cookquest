@@ -9,6 +9,8 @@ public record UserProfileResponse(
         int xp,
         int levelNumber,
         String levelName,
+        int currentLevelXp, // НОВЕ ПОЛЕ
+        int nextLevelXp,    // НОВЕ ПОЛЕ
         int balance,
         int ratingScore,
         Language language,

@@ -1,4 +1,4 @@
-package com.cookquest.mascot.config;
+package com.cookquest.mascot.service;
 
 import com.cookquest.mascot.entity.Mascot;
 import com.cookquest.mascot.entity.MascotRarity;

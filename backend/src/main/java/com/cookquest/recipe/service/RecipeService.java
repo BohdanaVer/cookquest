@@ -103,7 +103,7 @@ public class RecipeService {
         if (rawTextQuery != null && !rawTextQuery.isBlank()) {
             InputSanitizer.SanitizeResult result = inputSanitizer.sanitizeUserComment(rawTextQuery);
             if (!result.safe()) {
-                throw new AppException(ErrorCode.SECURITY_VIOLATION, result.message(), HttpStatus.BAD_REQUEST);
+                throw new AppException(ErrorCode.PROFANITY_OR_UNSAFE_CONTENT, result.message(), HttpStatus.BAD_REQUEST);
             }
             safeTextQuery = result.sanitized();
         }
@@ -125,7 +125,7 @@ public class RecipeService {
 
             if (validatedNodes.isEmpty()) {
                 log.error("AI returned invalid recipes. Raw response: {}", rawJson);
-                throw new AppException(ErrorCode.AI_GENERATION_FAILED, "ШІ не зміг створити валідні рецепти.", HttpStatus.SERVICE_UNAVAILABLE);
+                throw new AppException(ErrorCode.AI_INVALID_RECIPE_FORMAT, "ШІ повернув дані у невідомому форматі.", HttpStatus.SERVICE_UNAVAILABLE);
             }
 
             List<RecipeItem> safeRecipes = new ArrayList<>();
@@ -195,7 +195,7 @@ public class RecipeService {
             }
 
             if (safeRecipes.isEmpty()) {
-                throw new AppException(ErrorCode.AI_GENERATION_FAILED, "На жаль, ШІ згенерував рецепти у некоректному форматі.", HttpStatus.SERVICE_UNAVAILABLE);
+                throw new AppException(ErrorCode.AI_RECIPE_GENERATION_FAILED, "ШІ не зміг згенерувати жодного рецепта.", HttpStatus.SERVICE_UNAVAILABLE);
             }
 
             return new RecipeListResponse(safeRecipes);
@@ -210,10 +210,10 @@ public class RecipeService {
 
     public VisionResponse recognizeIngredients(List<MultipartFile> files, String requestLanguage) {
         if (files == null || files.isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Фотографії не передані", HttpStatus.BAD_REQUEST);
+            throw new AppException(ErrorCode.NO_PHOTOS_PROVIDED, "Не завантажено жодної фотографії", HttpStatus.BAD_REQUEST);
         }
         if (files.size() > 3) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Можна завантажити максимум 3 фотографії", HttpStatus.BAD_REQUEST);
+            throw new AppException(ErrorCode.TOO_MANY_PHOTOS, "Перевищено ліміт: максимум 3 фотографії", HttpStatus.BAD_REQUEST);
         }
 
         CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -242,8 +242,8 @@ public class RecipeService {
 
             if (ingredients.isEmpty()) {
                 throw new AppException(
-                        ErrorCode.AI_VISION_FAILED,
-                        "Не вдалося розпізнати інгредієнти або ШІ повернув некоректний формат.",
+                        ErrorCode.AI_INGREDIENT_RECOGNITION_FAILED,
+                        "ШІ не зміг розпізнати їжу на цих фото.",
                         HttpStatus.BAD_REQUEST
                 );
             }
@@ -267,7 +267,7 @@ public class RecipeService {
                 case "uk" -> "Ukrainian";
                 case "en" -> "English";
                 default -> throw new AppException(
-                        ErrorCode.INVALID_REQUEST,
+                        ErrorCode.UNSUPPORTED_LANGUAGE,
                         "Непідтримувана мова: '" + requestLang + "'. Доступні варіанти: 'uk', 'en'.",
                         HttpStatus.BAD_REQUEST
                 );

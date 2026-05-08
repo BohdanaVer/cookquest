@@ -53,23 +53,23 @@ public class BattleService {
         Long targetUserId = userBattleApi.getUserIdByUsername(request.targetUsername());
 
         if (targetUserId == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST,
+            throw new AppException(ErrorCode.USER_NOT_FOUND,
                     "Користувача з іменем " + request.targetUsername() + " не знайдено", HttpStatus.NOT_FOUND);
         }
 
         if (currentUserId.equals(targetUserId)) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Ви не можете викликати на батл самого себе",
+            throw new AppException(ErrorCode.CANNOT_BATTLE_SELF, "Ви не можете викликати на батл самого себе",
                     HttpStatus.BAD_REQUEST);
         }
 
         if (!recipeBattleApi.isRecipeValidForBattle(request.recipeId())) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Цей рецепт не можна використати для батлу",
+            throw new AppException(ErrorCode.RECIPE_NOT_VALID_FOR_BATTLE, "Цей рецепт не можна використати для батлу",
                     HttpStatus.BAD_REQUEST);
         }
 
         if (cookingBattleApi.isRecipeAlreadyUsed(currentUserId, request.recipeId())) {
             throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
+                    ErrorCode.RECIPE_ALREADY_USED_IN_BATTLE,
                     "Цей рецепт вже був використаний! Будь ласка, згенеруйте новий для створення батлу.",
                     HttpStatus.BAD_REQUEST);
         }
@@ -110,20 +110,20 @@ public class BattleService {
         Long currentUserId = getCurrentUserId();
         Battle battle = battleRepository.findById(battleId)
                 .orElseThrow(
-                        () -> new AppException(ErrorCode.INVALID_REQUEST, "Батл не знайдено", HttpStatus.NOT_FOUND));
+                        () -> new AppException(ErrorCode.BATTLE_NOT_FOUND, "Батл не знайдено", HttpStatus.NOT_FOUND));
 
         if (battle.getStatus() != BattleStatus.WAITING_FOR_OPPONENT && battle.getStatus() != BattleStatus.JUDGING) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Цей батл вже неможливо прийняти",
+            throw new AppException(ErrorCode.BATTLE_CANNOT_BE_ACCEPTED, "Цей батл вже неможливо прийняти",
                     HttpStatus.BAD_REQUEST);
         }
 
         BattleParticipant me = participantRepository.findByBattleIdAndUserId(battleId, currentUserId);
         if (me == null) {
-            throw new AppException(ErrorCode.SECURITY_VIOLATION, "Ви не є учасником цього батлу", HttpStatus.FORBIDDEN);
+            throw new AppException(ErrorCode.NOT_BATTLE_PARTICIPANT, "Ви не є учасником цього батлу", HttpStatus.FORBIDDEN);
         }
 
         if (me.getCookingSessionId() != null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Ви вже прийняли цей батл", HttpStatus.BAD_REQUEST);
+            throw new AppException(ErrorCode.BATTLE_ALREADY_ACCEPTED, "Ви вже прийняли цей батл", HttpStatus.BAD_REQUEST);
         }
 
         Long newSessionId = cookingBattleApi.startBattleCookingSession(currentUserId, battle.getRecipeId());
@@ -163,15 +163,15 @@ public class BattleService {
     protected BattleResponse submitParticipantInternal(Long battleId, Long userId) {
         Battle battle = battleRepository.findById(battleId)
                 .orElseThrow(
-                        () -> new AppException(ErrorCode.INVALID_REQUEST, "Батл не знайдено", HttpStatus.NOT_FOUND));
+                        () -> new AppException(ErrorCode.BATTLE_NOT_FOUND, "Батл не знайдено", HttpStatus.NOT_FOUND));
 
         if (battle.getStatus() == BattleStatus.COMPLETED || battle.getStatus() == BattleStatus.CANCELLED) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Цей батл вже завершено", HttpStatus.BAD_REQUEST);
+            throw new AppException(ErrorCode.BATTLE_ALREADY_FINISHED, "Цей батл вже завершено", HttpStatus.BAD_REQUEST);
         }
 
         BattleParticipant player = participantRepository.findByBattleIdAndUserId(battleId, userId);
         if (player == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Учасника не знайдено", HttpStatus.NOT_FOUND);
+            throw new AppException(ErrorCode.NOT_BATTLE_PARTICIPANT, "Учасника не знайдено", HttpStatus.NOT_FOUND);
         }
 
         if (player.isFinished()) {
@@ -229,7 +229,7 @@ public class BattleService {
     public Battle getBattle(Long battleId) {
         return battleRepository.findById(battleId)
                 .orElseThrow(
-                        () -> new AppException(ErrorCode.INVALID_REQUEST, "Батл не знайдено", HttpStatus.NOT_FOUND));
+                        () -> new AppException(ErrorCode.BATTLE_NOT_FOUND, "Батл не знайдено", HttpStatus.NOT_FOUND));
     }
 
     public List<BattleResponse> getActiveBattles() {
@@ -264,7 +264,7 @@ public class BattleService {
         BattleParticipant player = participantRepository.findByBattleIdAndUserId(battleId, userId);
 
         if (player == null) {
-            throw new AppException(ErrorCode.SECURITY_VIOLATION, "Ви не є учасником цього батлу", HttpStatus.FORBIDDEN);
+            throw new AppException(ErrorCode.NOT_BATTLE_PARTICIPANT, "Ви не є учасником цього батлу", HttpStatus.FORBIDDEN);
         }
 
         if (player.isFinished()) {
@@ -312,13 +312,13 @@ public class BattleService {
         BattleParticipant me = participants.stream()
                 .filter(p -> p.getUserId().equals(currentUserId))
                 .findFirst()
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Ви не є учасником цього батлу",
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_BATTLE_PARTICIPANT, "Ви не є учасником цього батлу",
                         HttpStatus.FORBIDDEN));
 
         BattleParticipant opponent = participants.stream()
                 .filter(p -> !p.getUserId().equals(currentUserId))
                 .findFirst()
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Суперника не знайдено",
+                .orElseThrow(() -> new AppException(ErrorCode.OPPONENT_NOT_FOUND, "Суперника не знайдено",
                         HttpStatus.INTERNAL_SERVER_ERROR));
 
         CookingSessionDto mySessionDto = null;

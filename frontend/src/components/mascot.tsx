@@ -25,6 +25,7 @@ interface MascotProps {
   random?: boolean
   interactive?: boolean
   delay?: number
+  customImageUrl?: string // НОВЕ ПОЛЕ: для кастомної картинки (з Cloudinary)
 }
 
 // --- Framer Motion Variants ---
@@ -111,6 +112,7 @@ export default function Mascot({
   random = false,
   interactive = true,
   delay = 0,
+  customImageUrl, // НОВЕ
 }: MascotProps) {
   const [randomName] = useState<MascotName>(() => 
     MASCOTS[Math.floor(Math.random() * MASCOTS.length)]
@@ -131,7 +133,8 @@ export default function Mascot({
     setTimeout(() => setInteractionMood(null), 800);
   }, [interactive, controls]);
 
-  const src = `/mascots/${mascotName}_${currentMood}.png`;
+  // Якщо є кастомна картинка, беремо її, якщо ні - локальну
+  const src = customImageUrl || `/mascots/${mascotName}_${currentMood}.png`;
 
   const getAnimationVariant = () => {
     switch (animation) {
@@ -204,8 +207,11 @@ export function MascotStatic({
   size = 120,
   message,
   className = '',
+  customImageUrl, // НОВЕ
 }: Omit<MascotProps, 'animation' | 'random' | 'interactive' | 'delay'>) {
-  const src = `/mascots/${name}_${mood}.png`
+  
+  // Якщо є кастомна картинка, беремо її, якщо ні - локальну
+  const src = customImageUrl || `/mascots/${name}_${mood}.png`
 
   return (
     <div className={`flex flex-col items-center gap-2 ${className}`}>

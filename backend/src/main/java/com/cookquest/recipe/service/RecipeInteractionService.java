@@ -48,7 +48,7 @@ public class RecipeInteractionService {
     @Transactional
     public RecipeItem getRecipeById(String id) {
         Recipe recipe = recipeRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Рецепт не знайдено", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.RECIPE_NOT_FOUND, "Рецепт не знайдено", HttpStatus.NOT_FOUND));
 
         unlockRecipeIfNeeded(recipe);
         return parseRecipeItem(recipe, getCurrentUser());
@@ -62,7 +62,7 @@ public class RecipeInteractionService {
         User user = getCurrentUser();
 
         if (!recipeRepository.existsById(recipeId)) {
-            throw new AppException(ErrorCode.NOT_FOUND, "Рецепт не знайдено", HttpStatus.NOT_FOUND);
+            throw new AppException(ErrorCode.RECIPE_NOT_FOUND, "Рецепт не знайдено", HttpStatus.NOT_FOUND);
         }
 
         if (savedRecipeRepository.existsByUserIdAndRecipeId(user.getId(), recipeId)) {
@@ -200,7 +200,7 @@ public class RecipeInteractionService {
             );
         } catch (Exception e) {
             log.error("Помилка парсингу рецепта {}", recipe.getId(), e);
-            throw new AppException(ErrorCode.INTERNAL_ERROR, "Помилка читання рецепта", HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new AppException(ErrorCode.RECIPE_PARSE_ERROR, "Помилка читання даних рецепта з бази", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
