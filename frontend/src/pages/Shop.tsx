@@ -67,7 +67,7 @@ const RARITY_COLORS: Record<string, string> = {
 }
 
 export default function Shop() {
-    const { t, i18n } = useTranslation()
+    const { t } = useTranslation()
 
     const [user, setUser] = useState<UserProfile | null>(null)
     const [mascots, setMascots] = useState<MascotItem[]>([])

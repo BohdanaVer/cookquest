@@ -4,7 +4,6 @@ import { Camera, Shuffle, Swords, Zap, Trophy, ChefHat, ChevronDown, ChevronUp, 
 import { api } from '../api/axiosClient';
 import { useTranslation } from 'react-i18next';
 
-// Інтерфейс точно відповідає твоєму бекенд-DTO
 interface UserProfileData {
     id: number;
     username: string;
@@ -40,12 +39,12 @@ interface BattleResponse {
         cookingTimeMinutes?: number;
         cuisine?: string;
         dietaryTags?: string[];
-        ingredients?: any[];
+        ingredients?: unknown[]; // ВИПРАВЛЕНО: any -> unknown
         stepsCount?: number;
     };
     mySession?: {
         sessionId: number;
-        recipe?: any;
+        recipe?: unknown; // ВИПРАВЛЕНО: any -> unknown
     };
     opponentName: string;
     isOpponentFinished: boolean;
@@ -89,7 +88,7 @@ export default function Home() {
                     api.get('/api/v1/friends/requests').catch(() => ({ data: [] })),
                     api.get('/api/v1/battles/active').catch(() => ({ data: [] }))
                 ]);
-                
+
                 setUser(profileRes.data);
                 setActiveSessions(sessionsRes.data);
                 setFriendRequests(requestsRes.data);
@@ -138,24 +137,22 @@ export default function Home() {
     const totalCooked = 0;
     const totalCompleted = 0;
 
-    // ВСІ ДАНІ СУВОРО З БЕКЕНДУ
     const username = user.username;
-    const mascotImageUrl = user.activeMascotImageUrlHappy || ''; 
+    const mascotImageUrl = user.activeMascotImageUrlHappy || '';
     const currentXp = user.xp;
     const currentLevelXp = user.currentLevelXp;
     const nextLevelXp = user.nextLevelXp;
     const displayLevel = user.levelNumber;
-    const levelName = user.levelName;
     const ratingScore = user.ratingScore;
-    
-    // Розрахунок прогресу у відсотках
+    // ВИПРАВЛЕНО: Видалено невикористану змінну levelName
+
     let xpProgress = 0;
     if (nextLevelXp > currentLevelXp) {
         xpProgress = ((currentXp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
     } else {
-        xpProgress = 100; // Досягнуто максимального рівня
+        xpProgress = 100;
     }
-    xpProgress = Math.max(0, Math.min(100, xpProgress)); 
+    xpProgress = Math.max(0, Math.min(100, xpProgress));
 
     const radius = 45;
     const circumference = 2 * Math.PI * radius;
@@ -164,19 +161,17 @@ export default function Home() {
     return (
         <div className="space-y-5 pb-20">
 
-            {/* ВЕРХНІЙ МАСКОТ З ПРИВІТАННЯМ */}
             <div className="flex justify-center animate-slide-up mt-2 mb-6">
                 <div className="flex flex-col items-center gap-2">
                     <div className="relative w-20 h-20">
                         {mascotImageUrl && (
-                            <img 
-                                src={mascotImageUrl} 
-                                alt="Mascot" 
-                                className="w-full h-full object-contain drop-shadow-xl animate-bounce" 
+                            <img
+                                src={mascotImageUrl}
+                                alt="Mascot"
+                                className="w-full h-full object-contain drop-shadow-xl animate-bounce"
                             />
                         )}
                     </div>
-                    {/* Темна бульбашка */}
                     <div className="relative bg-[#1f1f33] border border-white/5 text-white px-5 py-2.5 rounded-2xl font-bold text-sm shadow-lg">
                         <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#1f1f33] border-t border-l border-white/5 rotate-45"></div>
                         <span className="relative z-10">{t('home.welcome', { name: username })}</span>
@@ -184,7 +179,6 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* ПРОФІЛЬ */}
             <div className="relative bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-3xl p-5 border border-white/5 animate-slide-up">
                 <div className="flex items-center gap-4">
                     <div className="relative flex-shrink-0">
@@ -240,7 +234,6 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* АКТИВНІ БАТЛИ */}
             {activeBattles.length > 0 && (
                 <div className="bg-[#1a1a2e] border border-[#ff3366]/30 rounded-3xl p-5 animate-slide-up" style={{ animationDelay: '0.05s' }}>
                     <div className="flex items-center justify-between mb-4">
@@ -255,31 +248,33 @@ export default function Home() {
 
                     <div className="space-y-4">
                         {activeBattles.slice(0, isBattlesExpanded ? activeBattles.length : 1).map((battle, index) => {
-                            const isChallenged = battle.status === 'WAITING_FOR_OPPONENT' && !battle.mySession;
-                            
+                            // ВИПРАВЛЕНО: Спрощено умову виклику (якщо немає mySession — значить ще не прийняв)
+                            const isChallenged = !battle.mySession;
+
                             const goToRecipePreview = () => {
-                                    const recipeId = battle.recipePreview.recipeId;
-                                    if (!recipeId) return;
-                                    sessionStorage.setItem('current_viewing_recipe', JSON.stringify({
-                                        id: recipeId,
-                                        name: battle.recipePreview.name,
-                                        description: battle.recipePreview.description ?? '',
-                                        difficulty: battle.recipePreview.difficulty ?? '',
-                                        points: battle.recipePreview.points ?? 0,
-                                        cookingTimeMinutes: battle.recipePreview.cookingTimeMinutes ?? 30,
-                                        cuisine: battle.recipePreview.cuisine ?? '',
-                                        dietaryTags: battle.recipePreview.dietaryTags ?? [],
-                                        ingredients: battle.recipePreview.ingredients ?? [],
-                                        steps: [],
-                                        stepCount: battle.recipePreview.stepsCount ?? 0,
-                                    }));
-                                    navigate(`/recipe/${recipeId}?battle=${battle.battleId}&pending=true`);
-                                };
+                                const recipeId = battle.recipePreview.recipeId;
+                                if (!recipeId) return;
+                                sessionStorage.setItem('current_viewing_recipe', JSON.stringify({
+                                    id: recipeId,
+                                    name: battle.recipePreview.name,
+                                    description: battle.recipePreview.description ?? '',
+                                    difficulty: battle.recipePreview.difficulty ?? '',
+                                    points: battle.recipePreview.points ?? 0,
+                                    cookingTimeMinutes: battle.recipePreview.cookingTimeMinutes ?? 30,
+                                    cuisine: battle.recipePreview.cuisine ?? '',
+                                    dietaryTags: battle.recipePreview.dietaryTags ?? [],
+                                    ingredients: battle.recipePreview.ingredients ?? [],
+                                    steps: [],
+                                    stepCount: battle.recipePreview.stepsCount ?? 0,
+                                }));
+                                navigate(`/recipe/${recipeId}?battle=${battle.battleId}&pending=true`);
+                            };
 
                             return (
                                 <div key={battle.battleId} className={`flex items-center justify-between gap-4 ${index > 0 ? "pt-4 border-t border-white/5" : ""}`}>
+                                    {/* ВИПРАВЛЕНО: Замість battle.recipeId використано battle.recipePreview?.recipeId */}
                                     <div
-                                        className={`flex-1 min-w-0 ${isChallenged && battle.recipeId ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                                        className={`flex-1 min-w-0 ${isChallenged && battle.recipePreview?.recipeId ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
                                         onClick={isChallenged ? goToRecipePreview : undefined}
                                     >
                                         <p className="font-bold text-white text-sm truncate">{battle.recipePreview.name}</p>
@@ -347,7 +342,7 @@ export default function Home() {
                         })}
                     </div>
                     {activeBattles.length > 1 && (
-                        <button 
+                        <button
                             onClick={() => setIsBattlesExpanded(!isBattlesExpanded)}
                             className="mt-4 w-full py-2 flex items-center justify-center gap-1 text-[11px] font-bold text-gray-500 hover:text-white transition-colors border-t border-white/5"
                         >
@@ -357,7 +352,6 @@ export default function Home() {
                 </div>
             )}
 
-            {/* АКТИВНІ СЕСІЇ */}
             {activeSessions.length > 0 && (
                 <div className="bg-[#1a1a2e] border border-orange-500/20 rounded-3xl p-5 animate-slide-up" style={{ animationDelay: '0.05s' }}>
                     <div className="flex items-center gap-2 mb-4">
@@ -406,7 +400,6 @@ export default function Home() {
                 </div>
             )}
 
-            {/* ВХІДНІ ЗАПИТИ В ДРУЗІ */}
             {friendRequests.length > 0 && (
                 <div className="bg-[#1a1a2e] rounded-3xl border border-blue-500/30 p-5 animate-slide-up" style={{ animationDelay: '0.1s' }}>
                     <div className="flex items-center justify-between mb-4">
@@ -418,7 +411,7 @@ export default function Home() {
                             {friendRequests.length}
                         </span>
                     </div>
-                    
+
                     <div className="space-y-3">
                         {friendRequests.map((request) => (
                             <div key={request.friendshipId} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl p-3">
@@ -438,13 +431,13 @@ export default function Home() {
                                     </div>
                                 </div>
                                 <div className="flex gap-2 shrink-0 ml-2">
-                                    <button 
+                                    <button
                                         onClick={() => handleRequestAction(request.friendshipId, 'decline')}
                                         className="w-8 h-8 rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 flex items-center justify-center transition-colors"
                                     >
                                         <X size={16} />
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => handleRequestAction(request.friendshipId, 'accept')}
                                         className="w-8 h-8 rounded-lg bg-blue-500 hover:bg-blue-400 text-white flex items-center justify-center transition-colors shadow-lg shadow-blue-500/20"
                                     >
@@ -456,8 +449,6 @@ export default function Home() {
                     </div>
                 </div>
             )}
-
-
 
             <div className="grid grid-cols-2 gap-3 animate-slide-up" style={{ animationDelay: '0.2s' }}>
                 <Link to="/generate?mode=photo" className="bg-[#1a1a2e] border border-white/5 rounded-2xl p-4 hover:border-orange-500/30 transition-all group">

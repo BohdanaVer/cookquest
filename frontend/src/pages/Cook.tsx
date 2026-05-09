@@ -39,6 +39,13 @@ interface BattleResponse {
     status: string;
 }
 
+// ДОДАНО: Інтерфейс для вирішення помилки "Unexpected any"
+interface MascotData {
+    isEquipped: boolean;
+    imageUrlHappy: string;
+    imageUrlSad?: string;
+}
+
 export default function Cook() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
@@ -63,16 +70,36 @@ export default function Cook() {
     const [battleDetails, setBattleDetails] = useState<BattleResponse | null>(null)
     const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
 
+    const [activeMascotUrls, setActiveMascotUrls] = useState<{happy: string, sad: string} | null>(null);
+    const [stepFeedback, setStepFeedback] = useState<{ passed: boolean, message: string } | null>(null)
+
+    useEffect(() => {
+        api.get('/api/v1/mascots')
+            .then(res => {
+                // ВИПРАВЛЕНО: Замість (m: any) використовуємо наш новий інтерфейс
+                const equipped = res.data.find((m: MascotData) => m.isEquipped);
+                if (equipped) {
+                    setActiveMascotUrls({
+                        happy: equipped.imageUrlHappy,
+                        sad: equipped.imageUrlSad || equipped.imageUrlHappy
+                    });
+                }
+            })
+            .catch(console.error);
+    }, []);
+
+    // ЗАЙВИЙ СТАРИЙ БЛОК ВИДАЛЕНО ЗВІДСИ
+
     useEffect(() => {
         let timer: ReturnType<typeof setInterval>;
         if (session?.xpMode === 'BATTLE' && recipe) {
             const startTimestamp = new Date(session.startedAt).getTime();
             const timeLimitMs = recipe.cookingTimeMinutes * 60 * 1000;
-            
+
             timer = setInterval(() => {
                 const now = new Date().getTime();
                 const elapsedMs = now - startTimestamp;
-                const remaining = Math.max(-elapsedMs, timeLimitMs - elapsedMs); // can be negative
+                const remaining = Math.max(-elapsedMs, timeLimitMs - elapsedMs);
                 setTimeRemaining(Math.floor(remaining / 1000));
             }, 1000);
         }
@@ -151,7 +178,7 @@ export default function Cook() {
         };
 
         initSession();
-    }, [id, isResumeMode, navigate, t]);
+    }, [id, isResumeMode, navigate, t, battleId]);
 
     const verifyStepOnBackend = async (stepIndex: number, file: File) => {
         if (!session) return false;
@@ -174,19 +201,21 @@ export default function Cook() {
 
             const result = response.data;
 
-            if (result && result.passed === false) {
-                toast.error(result.feedback || t('cook.verifyFailed', 'Фото не пройшло перевірку. Спробуйте ще раз.'));
-                return false;
-            }
-
-            if (result && result.feedback) {
-                toast.success(result.feedback);
+            if (result) {
+                const isPassed = result.passed !== false;
+                setStepFeedback({
+                    passed: isPassed,
+                    message: result.feedback || (isPassed
+                        ? t('cook.verifySuccess', 'Все виглядає чудово! Продовжуємо.')
+                        : t('cook.verifyFailed', 'ШІ не зміг розпізнати фото. Спробуй зробити більш чіткий знімок.'))
+                });
+                return isPassed;
             }
 
             return true;
         } catch (error) {
             console.error("Помилка перевірки кроку:", error);
-            toast.error(t('cook.verifyError', 'Помилка перевірки. Спробуйте ще раз.'));
+            toast.error(t('cook.verifyError', 'Помилка з\'єднання. Спробуйте ще раз.'));
             return false;
         } finally {
             setIsVerifying(false);
@@ -196,7 +225,6 @@ export default function Cook() {
     const completeStepLocally = (stepIndex: number) => {
         if (isVerifying) return;
         setCompletedSteps(prev => Math.max(prev, stepIndex + 1));
-        toast.success(t('cook.stepDone', 'Крок {{n}} виконано!', { n: stepIndex + 1 }));
     };
 
     const handleTakePhoto = (stepIndex: number) => {
@@ -233,7 +261,6 @@ export default function Cook() {
             if (session) {
                 try {
                     await api.post(`/api/v1/cooking/${session.sessionId}/cancel`);
-                    // Якщо це батл — також скасувати участь у батлі
                     if (battleId) {
                         await api.post(`/api/v1/battles/${battleId}/cancel`);
                     }
@@ -361,7 +388,6 @@ export default function Cook() {
                                     {!isCompleted && isAccessible && (
                                         <div className="flex flex-wrap items-center gap-2 mt-2">
 
-                                            {/* Кнопка ручного завершення (ховається на останньому кроці за потреби) */}
                                             {!hideManualDone && (
                                                 <button
                                                     onClick={() => completeStepLocally(index)}
@@ -372,7 +398,6 @@ export default function Cook() {
                                                 </button>
                                             )}
 
-                                            {/* Кнопка фото */}
                                             {canTakeOptionalPhoto && (
                                                 <button
                                                     onClick={() => handleTakePhoto(index)}
@@ -409,6 +434,54 @@ export default function Cook() {
                             className="w-full flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-extrabold text-lg py-5 rounded-2xl shadow-[0_0_40px_-10px_rgba(34,197,94,0.5)] transition-all active:scale-95"
                         >
                             {t('cook.dishReady', 'Dish is ready!')}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {stepFeedback && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+                    <div className={cn(
+                        "bg-[#1a1a2e] border-2 rounded-3xl p-8 max-w-sm w-full flex flex-col items-center text-center animate-in zoom-in-95 duration-500 shadow-[0_0_50px_rgba(0,0,0,0.5)]",
+                        stepFeedback.passed ? "border-green-500 shadow-green-500/20" : "border-red-500 shadow-red-500/20"
+                    )}>
+
+                        <div className="relative w-40 h-40 mb-6 flex justify-center items-center">
+                            <div className={cn(
+                                "absolute inset-0 rounded-full blur-3xl animate-pulse",
+                                stepFeedback.passed ? "bg-green-500/30" : "bg-red-500/20"
+                            )} />
+                            <img
+                                src={stepFeedback.passed ? activeMascotUrls?.happy : activeMascotUrls?.sad}
+                                alt="Mascot Reaction"
+                                className={cn(
+                                    "relative w-full h-full object-contain drop-shadow-2xl",
+                                    stepFeedback.passed ? "animate-bounce" : "grayscale"
+                                )}
+                            />
+                        </div>
+
+                        <h2 className={cn(
+                            "text-2xl font-extrabold mb-3",
+                            stepFeedback.passed ? "text-green-400" : "text-red-400"
+                        )}>
+                            {stepFeedback.passed ? t('cook.aiApproved', 'Відмінно!') : t('cook.aiRejected', 'Щось не так...')}
+                        </h2>
+
+                        <p className="text-gray-300 text-sm mb-8 leading-relaxed font-medium">
+                            {stepFeedback.message}
+                        </p>
+
+                        <button
+                            onClick={() => setStepFeedback(null)}
+                            className={cn(
+                                "w-full py-4 rounded-xl font-bold text-lg text-white hover:opacity-90 active:scale-95 transition-all",
+                                stepFeedback.passed
+                                    ? "bg-gradient-to-r from-green-500 to-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                                    : "bg-gradient-to-r from-red-500 to-orange-600 shadow-[0_0_20px_rgba(239,68,68,0.4)]"
+                            )}
+                        >
+                            {stepFeedback.passed ? t('common.continue', 'Продовжити') : t('common.tryAgain', 'Спробувати ще раз')}
                         </button>
                     </div>
                 </div>
