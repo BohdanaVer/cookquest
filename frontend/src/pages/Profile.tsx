@@ -66,16 +66,13 @@ export default function Profile() {
     const [dislikeInput, setDislikeInput] = useState('')
     const [saving, setSaving] = useState(false)
 
-    // Стейт для профілю
     const [user, setUser] = useState<UserProfileData | null>(null)
     const [loading, setLoading] = useState(true)
 
-    // Стейт для збережених рецептів
     const [savedRecipes, setSavedRecipes] = useState<RecipeItem[]>([])
     const [isRecipesExpanded, setIsRecipesExpanded] = useState(false)
     const [loadingRecipes, setLoadingRecipes] = useState(true)
 
-    // ДОДАНО: Стейт для історії генерацій
     const [historyRecipes, setHistoryRecipes] = useState<RecipeItem[]>([])
     const [isHistoryExpanded, setIsHistoryExpanded] = useState(false)
     const [loadingHistory, setLoadingHistory] = useState(true)
@@ -83,7 +80,6 @@ export default function Profile() {
 
 
     useEffect(() => {
-        // 1. Завантаження профілю
         const fetchProfileData = async () => {
             try {
                 const profileResp = await api.get('/api/v1/profiles/me');
@@ -109,7 +105,6 @@ export default function Profile() {
             }
         };
 
-        // 2. Завантаження збережених рецептів
         const fetchSavedRecipes = async () => {
             try {
                 const recipesResp = await api.get('/api/v1/recipes/saved');
@@ -121,7 +116,6 @@ export default function Profile() {
             }
         };
 
-        // 3. ДОДАНО: Завантаження історії генерацій
         const fetchHistoryRecipes = async () => {
             try {
                 const historyResp = await api.get('/api/v1/recipes/history');
@@ -133,7 +127,6 @@ export default function Profile() {
             }
         };
 
-        // Запускаємо всі запити паралельно
         fetchProfileData();
         fetchSavedRecipes();
         fetchHistoryRecipes();

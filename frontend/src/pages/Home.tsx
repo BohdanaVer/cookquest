@@ -39,12 +39,12 @@ interface BattleResponse {
         cookingTimeMinutes?: number;
         cuisine?: string;
         dietaryTags?: string[];
-        ingredients?: unknown[]; // ВИПРАВЛЕНО: any -> unknown
+        ingredients?: unknown[];
         stepsCount?: number;
     };
     mySession?: {
         sessionId: number;
-        recipe?: unknown; // ВИПРАВЛЕНО: any -> unknown
+        recipe?: unknown;
     };
     opponentName: string;
     isOpponentFinished: boolean;
@@ -144,7 +144,6 @@ export default function Home() {
     const nextLevelXp = user.nextLevelXp;
     const displayLevel = user.levelNumber;
     const ratingScore = user.ratingScore;
-    // ВИПРАВЛЕНО: Видалено невикористану змінну levelName
 
     let xpProgress = 0;
     if (nextLevelXp > currentLevelXp) {
@@ -248,7 +247,6 @@ export default function Home() {
 
                     <div className="space-y-4">
                         {activeBattles.slice(0, isBattlesExpanded ? activeBattles.length : 1).map((battle, index) => {
-                            // ВИПРАВЛЕНО: Спрощено умову виклику (якщо немає mySession — значить ще не прийняв)
                             const isChallenged = !battle.mySession;
 
                             const goToRecipePreview = () => {

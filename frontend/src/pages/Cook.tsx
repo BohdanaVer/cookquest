@@ -39,7 +39,6 @@ interface BattleResponse {
     status: string;
 }
 
-// ДОДАНО: Інтерфейс для вирішення помилки "Unexpected any"
 interface MascotData {
     isEquipped: boolean;
     imageUrlHappy: string;
@@ -76,7 +75,6 @@ export default function Cook() {
     useEffect(() => {
         api.get('/api/v1/mascots')
             .then(res => {
-                // ВИПРАВЛЕНО: Замість (m: any) використовуємо наш новий інтерфейс
                 const equipped = res.data.find((m: MascotData) => m.isEquipped);
                 if (equipped) {
                     setActiveMascotUrls({
@@ -88,7 +86,6 @@ export default function Cook() {
             .catch(console.error);
     }, []);
 
-    // ЗАЙВИЙ СТАРИЙ БЛОК ВИДАЛЕНО ЗВІДСИ
 
     useEffect(() => {
         let timer: ReturnType<typeof setInterval>;

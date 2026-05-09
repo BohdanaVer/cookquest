@@ -9,6 +9,12 @@ import { api } from '../api/axiosClient'
 import type { Recipe } from './Generate'
 import { useEffect, useState } from "react";
 
+interface FriendData {
+    id: number | string;
+    username: string;
+    avatarUrl?: string;
+}
+
 export default function RecipeDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
@@ -24,9 +30,8 @@ export default function RecipeDetail() {
     const [isBookmarked, setIsBookmarked] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
 
-    // Battle State
     const [isBattleModalOpen, setIsBattleModalOpen] = useState(false)
-    const [friends, setFriends] = useState<any[]>([])
+    const [friends, setFriends] = useState<FriendData[]>([])
     const [isLoadingFriends, setIsLoadingFriends] = useState(false)
     const [isStartingBattle, setIsStartingBattle] = useState(false)
 
@@ -138,7 +143,7 @@ export default function RecipeDetail() {
             } else {
                 navigate('/home');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Failed to start battle", error);
         } finally {
             setIsStartingBattle(false);
