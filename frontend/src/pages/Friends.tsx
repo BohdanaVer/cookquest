@@ -112,7 +112,7 @@ export default function Friends() {
             setSentRequests(prev => new Set(prev).add(username));
         } catch (error: unknown) {
             const err = error as ApiError;
-            alert(err.response?.data?.message || "Помилка відправки запиту");
+            console.error("Помилка відправки запиту:", err);
         }
     };
 
@@ -130,7 +130,7 @@ export default function Friends() {
             }
         } catch (error: unknown) {
             const err = error as ApiError;
-            alert(err.response?.data?.message || "Помилка обробки запиту");
+            console.error("Помилка обробки запиту:", err);
         }
     };
 

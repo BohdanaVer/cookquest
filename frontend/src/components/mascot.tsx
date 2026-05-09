@@ -6,26 +6,22 @@ import {
   type Variants,
 } from 'framer-motion'
 
-const MASCOTS = [
-  'broccoli', 'cauldron', 'cheese', 'icecream',
-  'knightpan', 'pepper', 'slime', 'stove',
-] as const
-
-type MascotName = typeof MASCOTS[number] | (string & {})
 type Mood = 'happy' | 'neutral' | 'sad'
 type Animation = 'idle' | 'bounce' | 'pop' | 'celebrate' | 'shake' | 'none'
 
 interface MascotProps {
-  name?: MascotName
+  customImageUrls?: {
+    happy?: string;
+    neutral?: string;
+    sad?: string;
+  }
   mood?: Mood
   size?: number
   message?: string
   animation?: Animation
   className?: string
-  random?: boolean
   interactive?: boolean
   delay?: number
-  customImageUrl?: string // НОВЕ ПОЛЕ: для кастомної картинки (з Cloudinary)
 }
 
 // --- Framer Motion Variants ---
@@ -103,22 +99,15 @@ const bubbleVariants: Variants = {
 }
 
 export default function Mascot({
-  name,
+  customImageUrls,
   mood = 'happy',
   size = 120,
   message,
   animation = 'idle',
   className = '',
-  random = false,
   interactive = true,
   delay = 0,
-  customImageUrl, // НОВЕ
 }: MascotProps) {
-  const [randomName] = useState<MascotName>(() => 
-    MASCOTS[Math.floor(Math.random() * MASCOTS.length)]
-  );
-  
-  const mascotName = name || (random ? randomName : 'broccoli');
 
   const [interactionMood, setInteractionMood] = useState<Mood | null>(null);
   const currentMood = interactionMood || mood;
@@ -133,8 +122,17 @@ export default function Mascot({
     setTimeout(() => setInteractionMood(null), 800);
   }, [interactive, controls]);
 
-  // Якщо є кастомна картинка, беремо її, якщо ні - локальну
-  const src = customImageUrl || `/mascots/${mascotName}_${currentMood}.png`;
+  const getSrc = () => {
+      if (!customImageUrls) return "";
+      if (currentMood === 'happy' && customImageUrls.happy) return customImageUrls.happy;
+      if (currentMood === 'sad' && customImageUrls.sad) return customImageUrls.sad;
+      if (currentMood === 'neutral' && customImageUrls.neutral) return customImageUrls.neutral;
+      return customImageUrls.happy || customImageUrls.neutral || customImageUrls.sad || "";
+  }
+
+  const src = getSrc();
+
+  if (!src) return null;
 
   const getAnimationVariant = () => {
     switch (animation) {
@@ -173,10 +171,10 @@ export default function Mascot({
           <motion.div animate={controls}>
             <img
               src={src}
-              alt={`${mascotName} mascot`}
+              alt={`mascot`}
               width={size}
               height={size}
-              className="drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)] select-none pointer-events-none"
+              className="drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)] select-none pointer-events-none object-contain"
               draggable={false}
             />
           </motion.div>
@@ -202,26 +200,34 @@ export default function Mascot({
 }
 
 export function MascotStatic({
-  name = 'broccoli',
+  customImageUrls,
   mood = 'happy',
   size = 120,
   message,
   className = '',
-  customImageUrl, // НОВЕ
-}: Omit<MascotProps, 'animation' | 'random' | 'interactive' | 'delay'>) {
+}: Omit<MascotProps, 'animation' | 'interactive' | 'delay'>) {
   
-  // Якщо є кастомна картинка, беремо її, якщо ні - локальну
-  const src = customImageUrl || `/mascots/${name}_${mood}.png`
+  const getSrc = () => {
+      if (!customImageUrls) return "";
+      if (mood === 'happy' && customImageUrls.happy) return customImageUrls.happy;
+      if (mood === 'sad' && customImageUrls.sad) return customImageUrls.sad;
+      if (mood === 'neutral' && customImageUrls.neutral) return customImageUrls.neutral;
+      return customImageUrls.happy || customImageUrls.neutral || customImageUrls.sad || "";
+  }
+
+  const src = getSrc();
+
+  if (!src) return null;
 
   return (
     <div className={`flex flex-col items-center gap-2 ${className}`}>
       <div className="animate-float">
         <img
           src={src}
-          alt={`${name} mascot`}
+          alt={`mascot`}
           width={size}
           height={size}
-          className="drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+          className="drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)] object-contain"
         />
       </div>
       {message && (

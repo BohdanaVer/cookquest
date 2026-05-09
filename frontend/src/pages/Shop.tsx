@@ -3,6 +3,7 @@ import { ShoppingBag, Wand2, Sparkles, Lock, Check, ChevronDown, ChevronUp, Load
 import { cn } from '../lib/utils'
 import { api } from '../api/axiosClient'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 interface UserProfile {
     balance: number;
@@ -100,10 +101,6 @@ export default function Shop() {
             setUser(profileRes.data)
             setMascots(mascotsRes.data)
             setGenerationPrice(settingsRes.data.generationPrice)
-
-            if (profileRes.data.language) {
-                i18n.changeLanguage(profileRes.data.language.toLowerCase())
-            }
         } catch (error) {
             console.error("Помилка завантаження даних магазину", error)
         } finally {
@@ -126,9 +123,10 @@ export default function Shop() {
         try {
             await api.post(`/api/v1/mascots/${id}/buy`)
             await fetchShopData()
+            window.dispatchEvent(new Event('profileUpdated'))
         } catch (error: unknown) {
             const err = error as ApiError
-            alert(err.response?.data?.message || "Помилка покупки")
+            console.error("Помилка покупки:", err)
         } finally {
             setActionLoading(false)
         }
@@ -140,9 +138,10 @@ export default function Shop() {
         try {
             await api.post(`/api/v1/mascots/${id}/equip`)
             await fetchShopData()
+            window.dispatchEvent(new Event('profileUpdated'))
         } catch (error: unknown) {
             const err = error as ApiError
-            alert(err.response?.data?.message || "Помилка екіпірування")
+            console.error("Помилка екіпірування:", err)
         } finally {
             setActionLoading(false)
         }
@@ -153,7 +152,7 @@ export default function Shop() {
         const currentBalance = user?.balance ?? 0
         
         if (currentBalance < generationPrice) {
-            alert(`Недостатньо монет! Потрібно ${generationPrice} 💰`)
+            toast.error(t('shop.insufficientCoins', `Недостатньо монет! Потрібно ${generationPrice} 💰`))
             return
         }
 
@@ -174,13 +173,14 @@ export default function Shop() {
             setGeneratedMascot(response.data)
             
             await fetchShopData()
+            window.dispatchEvent(new Event('profileUpdated'))
             setIsGeneratorOpen(false) 
             
             // Очищаємо форму
             setName(''); setDescription(''); setSubject(''); setExtraDetails('');
         } catch (error: unknown) {
             const err = error as ApiError
-            alert(err.response?.data?.message || "Помилка генерації")
+            console.error("Помилка генерації:", err)
         } finally {
             setActionLoading(false)
         }

@@ -46,7 +46,6 @@
     "saveError": "Error while saving",
     "saving": "Saving..."
   },
-
   "MASCOT_BROCCOLI": "Broccoli",
   "DESC_BROCCOLI": "Sporty and healthy, will give you energy!",
   "MASCOT_SLIMEY": "Slimey",
@@ -63,7 +62,6 @@
   "DESC_CAULDRON": "A mystical cauldron for magical soups.",
   "MASCOT_KNIGHT": "Knight Pan",
   "DESC_KNIGHT": "A brave defender of your kitchen.",
-
   "shop": {
     "title": "Shop",
     "balance": "Balance:",
@@ -116,13 +114,11 @@
       "equip": "Equip"
     }
   },
-
   "leaderboard": {
     "title": "Leaderboard",
     "yourRank": "Your rank:",
     "noParticipants": "No participants yet"
   },
-
   "friends": {
     "title": "Friends",
     "friendsCount": "{{count}} friends",
@@ -132,7 +128,6 @@
     "noFriendsTitle": "You don't have any friends yet.",
     "noFriendsSub": "Use the search above to find them!"
   },
-
   "generate": {
     "mascotSelect": "Choose a recipe!",
     "mascotFound": "Here is what I found!",
@@ -154,7 +149,6 @@
       "hard": "Hard"
     }
   },
-
   "home": {
     "loading": "Loading...",
     "welcome": "Hello, {{name}}!",
@@ -176,7 +170,6 @@
     "leaderboard": "Leaderboard",
     "yourRating": "Your rating: #{{score}}"
   },
-
   "nav": {
     "home": "Home",
     "recipes": "Recipes",
@@ -185,7 +178,6 @@
     "shop": "Shop",
     "friends": "Friends"
   },
-
   "quests": {
     "title": "Quests",
     "subtitle": "Complete tasks and earn experience",
@@ -265,5 +257,106 @@
     "battleBtn": "Battle",
     "battleDisabledInQuest": "Battles are disabled for quest recipes!",
     "battleInDev": "Battle mode is still in development!"
+  },
+  "battle": {
+    "title": "Battles",
+    "activeBattles": "Active Battles",
+    "chooseOpponent": "Choose Opponent",
+    "sendChallenge": "Send Challenge",
+    "challengeSent": "Challenge sent!",
+    "noFriends": "No friends available to battle",
+    "accept": "Accept",
+    "decline": "Decline",
+    "waitingForOpponent": "Waiting for opponent...",
+    "opponentTurn": "Opponent is cooking",
+    "judging": "Judging...",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "timeRemaining": "Time Remaining",
+    "timeOver": "Time's Up!",
+    "overtime": "Overtime",
+    "opponent": "Opponent",
+    "youWereChallenged": "You were challenged to a battle!",
+    "status": {
+      "WAITING_FOR_OPPONENT": "Waiting for Acceptance",
+      "ACTIVE": "In Progress",
+      "JUDGING": "Judging",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    }
+  },
+  "ranks": {
+    "rank1": "Kitchen Novice",
+    "rank2": "Apprentice Cook",
+    "rank3": "Culinary Enthusiast",
+    "rank4": "Skilled Cook",
+    "rank5": "Sous-Chef",
+    "rank6": "Head Chef",
+    "rank7": "Taste Virtuoso",
+    "rank8": "Master Chef",
+    "rank9": "Culinary Grandmaster",
+    "rank10": "Kitchen Legend"
+  },
+  "errors": {
+    "default": "An unknown error occurred. Please try again later.",
+    "INTERNAL_SERVER_ERROR": "Unexpected internal server error.",
+    "INTERNAL_ERROR": "Internal server error.",
+    "INVALID_REQUEST": "Invalid request.",
+    "VALIDATION_ERROR": "Input validation error.",
+    "NOT_FOUND": "Entity not found.",
+    "UNSUPPORTED_LANGUAGE": "Unsupported language.",
+    "USER_NOT_FOUND": "User not found.",
+    "EMAIL_ALREADY_EXISTS": "A user with this email already exists.",
+    "USERNAME_ALREADY_EXISTS": "A user with this username already exists.",
+    "BAD_CREDENTIALS": "Invalid email or password.",
+    "INVALID_PRINCIPAL_TYPE": "Authorization error.",
+    "UNAUTHORIZED_ACCESS": "Unauthorized access. Please log in.",
+    "STARTER_MASCOT_NOT_FOUND": "Starter mascot not found in the system.",
+    "PROFILE_NOT_FOUND": "Profile not found.",
+    "LEVELS_NOT_CONFIGURED": "Levels are not configured in the system.",
+    "CANNOT_ADD_SELF": "You cannot add yourself as a friend.",
+    "FRIENDSHIP_ALREADY_EXISTS": "You are already friends or a request is pending.",
+    "FRIEND_REQUEST_NOT_FOUND": "Friend request not found.",
+    "NOT_REQUEST_RECEIVER": "You cannot accept or decline this request.",
+    "FRIEND_REQUEST_ALREADY_PROCESSED": "This request has already been processed.",
+    "NOT_INVOLVED_IN_REQUEST": "You do not have access to this request.",
+    "RECIPE_NOT_FOUND": "Recipe not found.",
+    "RECIPE_PARSE_ERROR": "Error loading recipe. Data is corrupted.",
+    "AI_GENERATION_FAILED": "Failed to generate data (AI error).",
+    "AI_VISION_FAILED": "AI failed to process the image.",
+    "PROFANITY_OR_UNSAFE_CONTENT": "Your request contains inappropriate content.",
+    "NO_PHOTOS_PROVIDED": "Please provide photos.",
+    "TOO_MANY_PHOTOS": "You uploaded too many photos (max 3).",
+    "AI_INVALID_RECIPE_FORMAT": "AI generated the recipe in an invalid format.",
+    "AI_RECIPE_GENERATION_FAILED": "AI could not create a recipe from these ingredients.",
+    "AI_INGREDIENT_RECOGNITION_FAILED": "AI could not recognize food in this photo.",
+    "INSUFFICIENT_COINS": "Insufficient coins!",
+    "MASCOT_NOT_FOUND": "Mascot not found.",
+    "MASCOT_NOT_FOR_SALE": "This mascot is not for sale.",
+    "MASCOT_ALREADY_OWNED": "You already own this mascot.",
+    "MASCOT_NOT_OWNED": "You cannot equip a mascot you do not own.",
+    "MASCOT_GENERATION_FAILED": "Error creating mascot. Please try again.",
+    "INVALID_WEEK_START_DATE": "Invalid week start date.",
+    "DAY_NOT_FOUND": "Specified day not found.",
+    "QUEST_NOT_FOUND": "Quest not found.",
+    "BATCH_ALREADY_USED": "You have already started cooking a recipe from this batch.",
+    "STEP_VERIFICATION_NOT_ALLOWED_IN_VIEW_MODE": "Photo verification is not allowed in view mode.",
+    "INVALID_STEP_NUMBER": "Invalid step number.",
+    "PHOTO_ONLY_ALLOWED_ON_FINAL_STEP": "Photo is only allowed on the final step.",
+    "STEP_ALREADY_VERIFIED": "This step has already been verified.",
+    "SESSION_NOT_FOUND": "Cooking session not found.",
+    "NOT_SESSION_OWNER": "This is not your cooking session.",
+    "SESSION_NOT_ACTIVE": "Cooking session is already finished or cancelled.",
+    "CANNOT_BATTLE_SELF": "You cannot battle yourself.",
+    "RECIPE_NOT_VALID_FOR_BATTLE": "This recipe cannot be used for a battle.",
+    "RECIPE_ALREADY_USED_IN_BATTLE": "This recipe has already been used.",
+    "BATTLE_NOT_FOUND": "Battle not found.",
+    "BATTLE_CANNOT_BE_ACCEPTED": "This battle cannot be accepted anymore.",
+    "NOT_BATTLE_PARTICIPANT": "You are not a participant in this battle.",
+    "BATTLE_ALREADY_ACCEPTED": "You have already accepted this battle.",
+    "BATTLE_ALREADY_FINISHED": "This battle is already finished.",
+    "OPPONENT_NOT_FOUND": "Opponent not found.",
+    "EXTERNAL_API_ERROR": "External service error. Please try again later.",
+    "CLOUD_STORAGE_ERROR": "File upload error. Check your connection."
   }
 }

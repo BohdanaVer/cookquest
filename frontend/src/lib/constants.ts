@@ -19,18 +19,7 @@ export const LEVELS = [
   { level: 8, name: 'Легенда кухні', min_xp: 4000, max_xp: Infinity },
 ]
 
-export const DEFAULT_MASCOT = 'knightpan'
 
-export const MASCOT_ITEMS = [
-  { key: 'broccoli', name: 'Броколі', price: 0, rarity: 'common' },
-  { key: 'slime', name: 'Слаймі', price: 100, rarity: 'common' },
-  { key: 'cheese', name: 'Сирко', price: 200, rarity: 'rare' },
-  { key: 'pepper', name: 'Перчик', price: 300, rarity: 'rare' },
-  { key: 'icecream', name: 'Морозко', price: 500, rarity: 'epic' },
-  { key: 'stove', name: 'Пічка', price: 500, rarity: 'epic' },
-  { key: 'cauldron', name: 'Казанок', price: 800, rarity: 'epic' },
-  { key: 'knightpan', name: 'Лицар', price: 1500, rarity: 'legendary' },
-] as const
 
 
 export const DIFFICULTY_LABELS = { easy: 'Легко', medium: 'Середньо', hard: 'Складно' }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Camera, Shuffle, Swords, Zap, Trophy, ChefHat, ChevronDown, ChevronUp, Clock, UserPlus, Check, X, Loader2 } from 'lucide-react';
 import { api } from '../api/axiosClient';
 import { useTranslation } from 'react-i18next';
@@ -28,10 +28,19 @@ interface CookingSessionDto {
     startedAt: string;
 }
 
-interface PendingBattle {
-    id: string | number;
-    challenger: { username: string };
-    recipe: { name: string };
+interface BattleResponse {
+    battleId: number;
+    status: string;
+    recipePreview: {
+        id: string;
+        name: string;
+    };
+    mySession?: {
+        sessionId: number;
+    };
+    opponentName: string;
+    isOpponentFinished: boolean;
+    myTotalScore: number | null;
 }
 
 interface FriendRequestDto {
@@ -51,26 +60,33 @@ interface ApiError {
 
 export default function Home() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
 
     const [user, setUser] = useState<UserProfileData | null>(null);
     const [loading, setLoading] = useState(true);
 
     const [activeSessions, setActiveSessions] = useState<CookingSessionDto[]>([]);
+    const [activeBattles, setActiveBattles] = useState<BattleResponse[]>([]);
     const [friendRequests, setFriendRequests] = useState<FriendRequestDto[]>([]);
     const [isSessionsExpanded, setIsSessionsExpanded] = useState(false);
+    const [isBattlesExpanded, setIsBattlesExpanded] = useState(false);
 
     useEffect(() => {
         const fetchHomeData = async () => {
             try {
-                const [profileRes, sessionsRes, requestsRes] = await Promise.all([
+                const [profileRes, sessionsRes, requestsRes, battlesRes] = await Promise.all([
                     api.get('/api/v1/profiles/me'),
                     api.get('/api/v1/cooking/active'),
-                    api.get('/api/v1/friends/requests').catch(() => ({ data: [] }))
+                    api.get('/api/v1/friends/requests').catch(() => ({ data: [] })),
+                    api.get('/api/v1/battles/active').catch(() => ({ data: [] }))
                 ]);
                 
                 setUser(profileRes.data);
                 setActiveSessions(sessionsRes.data);
                 setFriendRequests(requestsRes.data);
+                setActiveBattles(
+                    battlesRes.data.filter((b: BattleResponse) => b.myTotalScore === null || b.myTotalScore === undefined)
+                );
             } catch (error) {
                 console.error("Помилка завантаження даних головної сторінки", error);
             } finally {
@@ -87,7 +103,7 @@ export default function Home() {
             setFriendRequests(prev => prev.filter(req => req.friendshipId !== friendshipId));
         } catch (error: unknown) {
             const err = error as ApiError;
-            alert(err.response?.data?.message || "Помилка обробки запиту");
+            console.error("Помилка обробки запиту", err);
         }
     };
 
@@ -112,7 +128,6 @@ export default function Home() {
 
     const totalCooked = 0;
     const totalCompleted = 0;
-    const pendingBattles: PendingBattle[] = [];
 
     // ВСІ ДАНІ СУВОРО З БЕКЕНДУ
     const username = user.username;
@@ -186,7 +201,7 @@ export default function Home() {
                             {username}
                         </h1>
                         <p className="text-xs text-gray-400 font-medium truncate uppercase tracking-wider">
-                            {levelName}
+                            {t(`ranks.rank${displayLevel}`)}
                         </p>
                         <div className="mt-2 flex items-center gap-2 w-full">
                             <Zap size={12} className="text-green-400 shrink-0" />
@@ -215,6 +230,106 @@ export default function Home() {
                     </div>
                 </div>
             </div>
+
+            {/* АКТИВНІ БАТЛИ */}
+            {activeBattles.length > 0 && (
+                <div className="bg-[#1a1a2e] border border-[#ff3366]/30 rounded-3xl p-5 animate-slide-up" style={{ animationDelay: '0.05s' }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Swords size={18} className="text-[#ff3366]" />
+                            <h2 className="text-sm font-bold text-white">{t('battle.activeBattles', 'Активні батли')}</h2>
+                            <span className="bg-[#ff3366]/20 text-[#ff3366] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                {activeBattles.length}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {activeBattles.slice(0, isBattlesExpanded ? activeBattles.length : 1).map((battle, index) => {
+                            const isChallenged = battle.status === 'WAITING_FOR_OPPONENT' && !battle.mySession;
+                            
+                            return (
+                                <div key={battle.battleId} className={`flex items-center justify-between gap-4 ${index > 0 ? "pt-4 border-t border-white/5" : ""}`}>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold text-white text-sm truncate">{battle.recipePreview.name}</p>
+                                        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-gray-500 font-medium">
+                                            <span className="truncate">{t('battle.opponent', 'Суперник')}: {battle.opponentName}</span>
+                                            <span className="text-gray-600">•</span>
+                                            <span className={battle.status === 'WAITING_FOR_OPPONENT' ? 'text-yellow-500' : 'text-green-500'}>
+                                                {t(`battle.status.${battle.status}`)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    {isChallenged ? (
+                                        <div className="flex gap-2 shrink-0">
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const res = await api.post(`/api/v1/battles/${battle.battleId}/accept`);
+                                                        const acceptedBattle = res.data;
+                                                        // Витягуємо recipeId з сесії
+                                                        if (acceptedBattle.mySession?.recipe) {
+                                                            let recipeData: any;
+                                                            if (typeof acceptedBattle.mySession.recipe === 'string') {
+                                                                recipeData = JSON.parse(acceptedBattle.mySession.recipe);
+                                                            } else {
+                                                                recipeData = acceptedBattle.mySession.recipe;
+                                                            }
+                                                            const recipeId = recipeData.id || recipeData.recipeId;
+                                                            if (recipeId) {
+                                                                // Кешуємо рецепт щоб сторінка деталей рецепту могла його відобразити
+                                                                sessionStorage.setItem('current_viewing_recipe', JSON.stringify(recipeData));
+                                                                navigate(`/recipe/${recipeId}?battle=${battle.battleId}`);
+                                                                return;
+                                                            }
+                                                        }
+                                                        // Fallback: якщо не вдалось дістати recipeId
+                                                        window.location.reload();
+                                                    } catch (e) {
+                                                        console.error(e);
+                                                    }
+                                                }}
+                                                className="bg-green-500/20 hover:bg-green-500/30 text-green-500 p-2 rounded-xl transition-colors"
+                                            >
+                                                <Check size={16} />
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await api.post(`/api/v1/battles/${battle.battleId}/decline`);
+                                                        setActiveBattles(prev => prev.filter(b => b.battleId !== battle.battleId));
+                                                    } catch (e) {
+                                                        console.error(e);
+                                                    }
+                                                }}
+                                                className="bg-red-500/20 hover:bg-red-500/30 text-red-500 p-2 rounded-xl transition-colors"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <Link
+                                            to={battle.mySession ? `/cook/${battle.mySession.sessionId}?mode=resume&battle=${battle.battleId}` : '#'}
+                                            className="shrink-0 bg-[#ff3366]/10 hover:bg-[#ff3366]/20 text-[#ff3366] text-xs font-bold px-4 py-2 rounded-xl transition-colors"
+                                        >
+                                            {t('home.continue', 'Продовжити')}
+                                        </Link>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {activeBattles.length > 1 && (
+                        <button 
+                            onClick={() => setIsBattlesExpanded(!isBattlesExpanded)}
+                            className="mt-4 w-full py-2 flex items-center justify-center gap-1 text-[11px] font-bold text-gray-500 hover:text-white transition-colors border-t border-white/5"
+                        >
+                            {isBattlesExpanded ? <><ChevronUp size={14} /> Згорнути</> : <><ChevronDown size={14} /> Показати всі ({activeBattles.length})</>}
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* АКТИВНІ СЕСІЇ */}
             {activeSessions.length > 0 && (
@@ -316,29 +431,7 @@ export default function Home() {
                 </div>
             )}
 
-            {/* БИТВИ */}
-            {pendingBattles.length > 0 && (
-                <div className="space-y-2 animate-slide-up" style={{ animationDelay: '0.15s' }}>
-                    {pendingBattles.map((battle) => (
-                        <div key={battle.id} className="block bg-red-500/10 border border-red-500/20 rounded-2xl p-4 hover:bg-red-500/15 transition-all animate-pulse-glow" style={{ '--accent-glow': 'rgba(239,68,68,0.3)' } as React.CSSProperties}>
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center">
-                                    <Swords size={20} className="text-red-400" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-red-300 text-sm truncate">
-                                        {t('home.battleChallenge', { name: battle.challenger.username })}
-                                    </p>
-                                    <p className="text-xs text-red-400/60 truncate">{battle.recipe.name}</p>
-                                </div>
-                                <span className="text-xs text-red-400 font-bold bg-red-500/20 px-2 py-1 rounded-lg shrink-0">
-                                    {t('home.battleBadge')}
-                                </span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+
 
             <div className="grid grid-cols-2 gap-3 animate-slide-up" style={{ animationDelay: '0.2s' }}>
                 <Link to="/generate?mode=photo" className="bg-[#1a1a2e] border border-white/5 rounded-2xl p-4 hover:border-orange-500/30 transition-all group">

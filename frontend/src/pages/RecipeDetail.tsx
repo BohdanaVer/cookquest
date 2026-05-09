@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { Bookmark, ChevronDown, ChevronUp, Swords, ChefHat, ArrowLeft } from 'lucide-react'
+import { Bookmark, ChevronDown, ChevronUp, Swords, ChefHat, ArrowLeft, X, Loader2, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '../lib/utils'
 import { useTranslation } from 'react-i18next'
@@ -16,11 +16,18 @@ export default function RecipeDetail() {
 
     const [searchParams] = useSearchParams()
     const isQuest = searchParams.get('quest') === 'true'
+    const incomingBattleId = searchParams.get('battle')
 
     const [recipe, setRecipe] = useState<Recipe | null>(null)
     const [isIngredientsExpanded, setIsIngredientsExpanded] = useState(true)
     const [isBookmarked, setIsBookmarked] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
+
+    // Battle State
+    const [isBattleModalOpen, setIsBattleModalOpen] = useState(false)
+    const [friends, setFriends] = useState<any[]>([])
+    const [isLoadingFriends, setIsLoadingFriends] = useState(false)
+    const [isStartingBattle, setIsStartingBattle] = useState(false)
 
     useEffect(() => {
         const fetchRecipe = async () => {
@@ -95,6 +102,47 @@ export default function RecipeDetail() {
             setIsSaving(false);
         }
     }
+
+    const openBattleModal = async () => {
+        setIsBattleModalOpen(true);
+        setIsLoadingFriends(true);
+        try {
+            const response = await api.get('/api/v1/friends');
+            setFriends(response.data);
+        } catch (error) {
+            console.error("Failed to load friends", error);
+            toast.error(t('battle.noFriends', 'Немає друзів для батлу'));
+        } finally {
+            setIsLoadingFriends(false);
+        }
+    };
+
+    const handleStartBattle = async (targetUsername: string) => {
+        if (!recipe || isStartingBattle) return;
+        setIsStartingBattle(true);
+
+        try {
+            const response = await api.post('/api/v1/battles', {
+                recipeId: recipe.id,
+                targetUsername: targetUsername
+            });
+            const battleId = response.data.battleId;
+            const sessionId = response.data.mySession?.sessionId;
+
+            toast.success(t('battle.challengeSent', 'Виклик відправлено!'));
+            setIsBattleModalOpen(false);
+
+            if (sessionId) {
+                navigate(`/cook/${sessionId}?mode=resume&battle=${battleId}`);
+            } else {
+                navigate('/home');
+            }
+        } catch (error: any) {
+            console.error("Failed to start battle", error);
+        } finally {
+            setIsStartingBattle(false);
+        }
+    };
 
     if (!recipe) {
         return <div className="flex justify-center items-center min-h-[50vh] text-gray-500 animate-pulse">
@@ -178,31 +226,110 @@ export default function RecipeDetail() {
             </div>
 
             <div className="fixed bottom-[80px] left-0 right-0 p-4 z-10 pointer-events-none">
-                <div className="max-w-md mx-auto grid grid-cols-2 gap-3 pointer-events-auto">
-                    <button
-                        onClick={() => navigate(`/cook/${recipe.id}`)}
-                        className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all active:scale-95"
-                    >
-                        <ChefHat size={18} /> {t('recipe.cookBtn', 'Cook')}
-                    </button>
+                <div className={cn("max-w-md mx-auto gap-3 pointer-events-auto", incomingBattleId ? "flex" : "grid grid-cols-2")}>
 
-                    {isQuest ? (
+                    {incomingBattleId ? (
+                        /* Battle accepted — show single full-width Start Battle button */
                         <button
-                            onClick={() => toast.error(t('recipe.battleDisabledInQuest', 'Батли недоступні для квестових рецептів!'))}
-                            className="flex items-center justify-center gap-2 bg-[#2a2a3e] text-gray-500 font-bold py-4 rounded-2xl transition-all cursor-not-allowed shadow-lg border border-white/5"
+                            onClick={async () => {
+                                try {
+                                    // Fetch battle to get my session ID
+                                    const battleRes = await api.get(`/api/v1/battles/${incomingBattleId}`);
+                                    const battle = battleRes.data;
+                                    if (battle.mySession?.sessionId) {
+                                        navigate(`/cook/${battle.mySession.sessionId}?mode=resume&battle=${incomingBattleId}`);
+                                    }
+                                } catch (e) {
+                                    console.error(e);
+                                }
+                            }}
+                            className="flex-1 flex items-center justify-center gap-2 bg-[#ff3366] hover:bg-[#ff3366]/90 text-white font-bold py-4 rounded-2xl shadow-lg shadow-[#ff3366]/20 transition-all active:scale-95"
                         >
-                            <Swords size={18} /> {t('recipe.battleBtn', 'Battle')}
+                            <Swords size={18} /> {t('recipe.cookBtn', 'Готувати')} ⚔️
                         </button>
                     ) : (
-                        <button
-                            onClick={() => toast.info(t('recipe.battleInDev', 'Режим Батлу ще в розробці!'))}
-                            className="flex items-center justify-center gap-2 bg-[#ff3366] hover:bg-[#ff3366]/90 text-white font-bold py-4 rounded-2xl shadow-lg shadow-[#ff3366]/20 transition-all active:scale-95"
-                        >
-                            <Swords size={18} /> {t('recipe.battleBtn', 'Battle')}
-                        </button>
+                        /* Normal mode — Cook and Battle buttons */
+                        <>
+                            <button
+                                onClick={() => navigate(`/cook/${recipe.id}`)}
+                                className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all active:scale-95"
+                            >
+                                <ChefHat size={18} /> {t('recipe.cookBtn', 'Cook')}
+                            </button>
+
+                            {isQuest ? (
+                                <button
+                                    onClick={() => toast.error(t('recipe.battleDisabledInQuest', 'Батли недоступні для квестових рецептів!'))}
+                                    className="flex items-center justify-center gap-2 bg-[#2a2a3e] text-gray-500 font-bold py-4 rounded-2xl transition-all cursor-not-allowed shadow-lg border border-white/5"
+                                >
+                                    <Swords size={18} /> {t('recipe.battleBtn', 'Battle')}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={openBattleModal}
+                                    className="flex items-center justify-center gap-2 bg-[#ff3366] hover:bg-[#ff3366]/90 text-white font-bold py-4 rounded-2xl shadow-lg shadow-[#ff3366]/20 transition-all active:scale-95"
+                                >
+                                    <Swords size={18} /> {t('recipe.battleBtn', 'Battle')}
+                                </button>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
+
+            {/* Battle Modal */}
+            {isBattleModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pointer-events-auto">
+                    <div className="bg-[#1a1a2e] w-full max-w-md rounded-3xl p-6 border border-white/10 shadow-2xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Swords className="text-[#ff3366]" size={24} />
+                                {t('battle.chooseOpponent', 'Оберіть суперника')}
+                            </h2>
+                            <button onClick={() => setIsBattleModalOpen(false)} className="text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 p-2 rounded-full">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {isLoadingFriends ? (
+                            <div className="flex justify-center py-8">
+                                <Loader2 className="animate-spin text-[#ff3366]" size={32} />
+                            </div>
+                        ) : friends.length > 0 ? (
+                            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                                {friends.map((friend) => (
+                                    <div key={friend.id} className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden border border-white/10">
+                                                {friend.avatarUrl ? (
+                                                    <img src={friend.avatarUrl} alt={friend.username} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-sm font-bold bg-gradient-to-br from-purple-500 to-indigo-500 text-white uppercase">
+                                                        {friend.username.charAt(0)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <span className="font-bold text-white">{friend.username}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => handleStartBattle(friend.username)}
+                                            disabled={isStartingBattle}
+                                            className="px-4 py-2 rounded-xl text-sm font-bold bg-[#ff3366]/20 text-[#ff3366] hover:bg-[#ff3366]/30 transition-colors disabled:opacity-50"
+                                        >
+                                            {t('battle.sendChallenge', 'Кинути виклик')}
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center text-gray-500 py-8 px-4 bg-white/5 rounded-2xl border border-white/5">
+                                <Users size={40} className="mx-auto mb-3 opacity-20" />
+                                <p>{t('battle.noFriends', 'Немає друзів для батлу')}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
         </div>
     )

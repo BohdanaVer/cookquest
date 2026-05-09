@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, Check, Camera, Loader2 } from 'lucide-react'
+import { ArrowLeft, Check, Camera, Loader2, Clock, Swords } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '../lib/utils'
 import { useTranslation } from 'react-i18next'
@@ -29,8 +29,14 @@ interface CookingSessionDto {
     earnedPoints: number;
     startedAt: string;
     batchId: string;
-    xpMode: 'FULL' | 'REDUCED' | 'NONE';
+    xpMode: 'FULL' | 'REDUCED' | 'NONE' | 'BATTLE';
     completedSteps?: number;
+}
+
+interface BattleResponse {
+    battleId: number;
+    opponentName: string;
+    status: string;
 }
 
 export default function Cook() {
@@ -50,7 +56,37 @@ export default function Cook() {
 
     const hasStartedRef = useRef(false)
 
-    const isResumeMode = new URLSearchParams(location.search).get('mode') === 'resume'
+    const searchParams = new URLSearchParams(location.search)
+    const isResumeMode = searchParams.get('mode') === 'resume'
+    const battleId = searchParams.get('battle')
+
+    const [battleDetails, setBattleDetails] = useState<BattleResponse | null>(null)
+    const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
+
+    useEffect(() => {
+        let timer: ReturnType<typeof setInterval>;
+        if (session?.xpMode === 'BATTLE' && recipe) {
+            const startTimestamp = new Date(session.startedAt).getTime();
+            const timeLimitMs = recipe.cookingTimeMinutes * 60 * 1000;
+            
+            timer = setInterval(() => {
+                const now = new Date().getTime();
+                const elapsedMs = now - startTimestamp;
+                const remaining = Math.max(-elapsedMs, timeLimitMs - elapsedMs); // can be negative
+                setTimeRemaining(Math.floor(remaining / 1000));
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [session, recipe]);
+
+    const formatTime = (totalSeconds: number) => {
+        const isNegative = totalSeconds < 0;
+        const absSeconds = Math.abs(totalSeconds);
+        const minutes = Math.floor(absSeconds / 60);
+        const seconds = absSeconds % 60;
+        const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        return isNegative ? `-${timeStr}` : timeStr;
+    };
 
     useEffect(() => {
         if (!id || hasStartedRef.current) return;
@@ -65,7 +101,7 @@ export default function Cook() {
 
                     if (!existingSession) {
                         toast.error('Активну сесію не знайдено');
-                        navigate('/');
+                        navigate('/home');
                         return;
                     }
 
@@ -80,6 +116,15 @@ export default function Cook() {
                     setRecipe(parsedRecipe);
 
                     setCompletedSteps(existingSession.completedSteps || 0);
+
+                    if (battleId) {
+                        try {
+                            const battleRes = await api.get(`/api/v1/battles/${battleId}`);
+                            setBattleDetails(battleRes.data);
+                        } catch (e) {
+                            console.error("Failed to load battle details", e);
+                        }
+                    }
 
                 } else {
                     const response = await api.post('/api/v1/cooking/start', { recipeId: id });
@@ -176,6 +221,7 @@ export default function Cook() {
     };
 
     const handleFinishCooking = () => {
+        window.dispatchEvent(new Event('profileUpdated'));
         toast.success(t('cook.success', 'Готування завершено! Вітаємо!'));
         navigate(-1);
     };
@@ -187,12 +233,16 @@ export default function Cook() {
             if (session) {
                 try {
                     await api.post(`/api/v1/cooking/${session.sessionId}/cancel`);
+                    // Якщо це батл — також скасувати участь у батлі
+                    if (battleId) {
+                        await api.post(`/api/v1/battles/${battleId}/cancel`);
+                    }
                     toast.info(t('cook.cancelled', 'Готування скасовано.'));
                 } catch (error) {
                     console.error("Failed to cancel cooking session:", error);
                 }
             }
-            navigate(-1);
+            navigate('/home');
         }
     };
 
@@ -212,6 +262,30 @@ export default function Cook() {
             <button onClick={handleCancelCooking} className="mb-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
                 <ArrowLeft size={20} /> {t('cook.cancelSession', 'Відмінити готування')}
             </button>
+
+            {session?.xpMode === 'BATTLE' && battleDetails && (
+                <div className="bg-[#ff3366]/10 border border-[#ff3366]/30 rounded-3xl p-5 mb-6 shadow-xl animate-in slide-in-from-top flex items-center justify-between">
+                    <div>
+                        <div className="flex items-center gap-2 text-[#ff3366] font-bold text-sm mb-1 uppercase tracking-wider">
+                            <Swords size={18} /> {t('battle.opponentTurn', 'Батл проти')}
+                        </div>
+                        <div className="text-white font-extrabold text-xl">{battleDetails.opponentName}</div>
+                    </div>
+                    {timeRemaining !== null && (
+                        <div className={cn(
+                            "flex flex-col items-end",
+                            timeRemaining < 0 ? "text-red-500" : "text-[#ff3366]"
+                        )}>
+                            <div className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">
+                                {timeRemaining < 0 ? t('battle.overtime', 'Запізнення') : t('battle.timeRemaining', 'Залишилось часу')}
+                            </div>
+                            <div className="text-3xl font-black tabular-nums tracking-tight flex items-center gap-2">
+                                <Clock size={24} /> {formatTime(timeRemaining)}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="bg-[#2a1a1a] rounded-3xl p-6 mb-6 shadow-xl border border-orange-500/10">
                 <h1 className="font-extrabold text-white text-2xl leading-tight mb-4">{recipe.name}</h1>
@@ -251,7 +325,7 @@ export default function Cook() {
                     const isCompleted = index < completedSteps;
                     const isLastStep = index === totalSteps - 1;
 
-                    const canTakeOptionalPhoto = session.xpMode === 'FULL' || (session.xpMode === 'REDUCED' && isLastStep);
+                    const canTakeOptionalPhoto = session.xpMode === 'FULL' || ((session.xpMode === 'REDUCED' || session.xpMode === 'BATTLE') && isLastStep);
                     const isThisStepVerifying = isVerifying && (index === pendingPhotoStepIndex);
 
                     const hideManualDone = isLastStep && session.xpMode !== 'NONE';

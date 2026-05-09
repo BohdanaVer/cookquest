@@ -46,7 +46,6 @@
     "saveError": "Помилка при збереженні",
     "saving": "Зберігаю..."
   },
-
   "MASCOT_BROCCOLI": "Броколі",
   "DESC_BROCCOLI": "Спортивний та здоровий, додасть енергії!",
   "MASCOT_SLIMEY": "Слаймі",
@@ -63,7 +62,6 @@
   "DESC_CAULDRON": "Містичний казанок для магічних супів.",
   "MASCOT_KNIGHT": "Сковорода-Лицар",
   "DESC_KNIGHT": "Відважний захисник твоєї кухні.",
-
   "shop": {
     "title": "Магазин",
     "balance": "Баланс:",
@@ -116,13 +114,11 @@
       "equip": "Екіпірувати"
     }
   },
-
   "leaderboard": {
     "title": "Рейтинг",
     "yourRank": "Твоє місце:",
     "noParticipants": "Поки немає учасників"
   },
-
   "friends": {
     "title": "Друзі",
     "friendsCount": "{{count}} друзів",
@@ -132,7 +128,6 @@
     "noFriendsTitle": "У тебе поки немає друзів.",
     "noFriendsSub": "Скористайся пошуком вище, щоб знайти їх!"
   },
-
   "generate": {
     "mascotSelect": "Обери рецепт!",
     "mascotFound": "Ось що я знайшов!",
@@ -154,7 +149,6 @@
       "hard": "Складно"
     }
   },
-
   "home": {
     "loading": "Завантаження...",
     "welcome": "Вітаю, {{name}}!",
@@ -176,7 +170,6 @@
     "leaderboard": "Таблиця лідерів",
     "yourRating": "Ваш рейтинг: #{{score}}"
   },
-
   "nav": {
     "home": "Головна",
     "recipes": "Рецепти",
@@ -185,7 +178,6 @@
     "shop": "Магазин",
     "friends": "Друзі"
   },
-
   "quests": {
     "title": "Квести",
     "subtitle": "Виконуй завдання та отримуй досвід",
@@ -265,5 +257,106 @@
     "battleBtn": "Батл",
     "battleDisabledInQuest": "Батли недоступні для квестових рецептів!",
     "battleInDev": "Режим Батлу ще в розробці!"
+  },
+  "battle": {
+    "title": "Батли",
+    "activeBattles": "Активні батли",
+    "chooseOpponent": "Оберіть суперника",
+    "sendChallenge": "Кинути виклик",
+    "challengeSent": "Виклик відправлено!",
+    "noFriends": "Немає друзів для батлу",
+    "accept": "Прийняти",
+    "decline": "Відхилити",
+    "waitingForOpponent": "Очікуємо суперника...",
+    "opponentTurn": "Суперник готує",
+    "judging": "Оцінювання...",
+    "completed": "Завершено",
+    "cancelled": "Скасовано",
+    "timeRemaining": "Залишилось часу",
+    "timeOver": "Час вийшов!",
+    "overtime": "Запізнення",
+    "opponent": "Суперник",
+    "youWereChallenged": "Вас викликали на батл!",
+    "status": {
+      "WAITING_FOR_OPPONENT": "Очікує прийняття",
+      "ACTIVE": "В процесі",
+      "JUDGING": "Оцінювання",
+      "COMPLETED": "Завершено",
+      "CANCELLED": "Скасовано"
+    }
+  },
+  "ranks": {
+    "rank1": "Кухонний новачок",
+    "rank2": "Учень кухаря",
+    "rank3": "Кулінарний ентузіаст",
+    "rank4": "Досвідчений кухар",
+    "rank5": "Су-шеф",
+    "rank6": "Шеф-кухар",
+    "rank7": "Віртуоз смаку",
+    "rank8": "Майстер-шеф",
+    "rank9": "Кулінарний грандмастер",
+    "rank10": "Легенда кухні"
+  },
+  "errors": {
+    "default": "Сталася невідома помилка. Спробуйте пізніше.",
+    "INTERNAL_SERVER_ERROR": "Непередбачувана внутрішня помилка сервера.",
+    "INTERNAL_ERROR": "Внутрішня помилка сервера.",
+    "INVALID_REQUEST": "Некоректний запит.",
+    "VALIDATION_ERROR": "Помилка перевірки вхідних даних.",
+    "NOT_FOUND": "Дані не знайдено.",
+    "UNSUPPORTED_LANGUAGE": "Непідтримувана мова.",
+    "USER_NOT_FOUND": "Користувача не знайдено.",
+    "EMAIL_ALREADY_EXISTS": "Користувач з таким email вже зареєстрований.",
+    "USERNAME_ALREADY_EXISTS": "Користувач з таким іменем вже зареєстрований.",
+    "BAD_CREDENTIALS": "Неправильний email або пароль.",
+    "INVALID_PRINCIPAL_TYPE": "Помилка авторизації.",
+    "UNAUTHORIZED_ACCESS": "Несанкціонований доступ. Будь ласка, увійдіть у систему.",
+    "STARTER_MASCOT_NOT_FOUND": "Стартовий маскот не знайдений в системі.",
+    "PROFILE_NOT_FOUND": "Профіль не знайдено.",
+    "LEVELS_NOT_CONFIGURED": "Рівні не налаштовані в системі.",
+    "CANNOT_ADD_SELF": "Ви не можете додати в друзі самого себе.",
+    "FRIENDSHIP_ALREADY_EXISTS": "Ви вже друзі або запит вже надіслано.",
+    "FRIEND_REQUEST_NOT_FOUND": "Запит у друзі не знайдено.",
+    "NOT_REQUEST_RECEIVER": "Ви не можете прийняти або відхилити цей запит.",
+    "FRIEND_REQUEST_ALREADY_PROCESSED": "Цей запит вже було оброблено.",
+    "NOT_INVOLVED_IN_REQUEST": "Ви не маєте доступу до цього запиту.",
+    "RECIPE_NOT_FOUND": "Рецепт не знайдено.",
+    "RECIPE_PARSE_ERROR": "Помилка завантаження рецепта. Дані пошкоджено.",
+    "AI_GENERATION_FAILED": "Не вдалося згенерувати дані (помилка ШІ).",
+    "AI_VISION_FAILED": "ШІ не зміг обробити зображення.",
+    "PROFANITY_OR_UNSAFE_CONTENT": "Ваш запит містить неприйнятний контент.",
+    "NO_PHOTOS_PROVIDED": "Будь ласка, додайте фотографії.",
+    "TOO_MANY_PHOTOS": "Ви завантажили забагато фотографій (максимум 3).",
+    "AI_INVALID_RECIPE_FORMAT": "ШІ згенерував рецепт у неправильному форматі.",
+    "AI_RECIPE_GENERATION_FAILED": "ШІ не зміг придумати рецепт із цих інгредієнтів.",
+    "AI_INGREDIENT_RECOGNITION_FAILED": "ШІ не знайшов їжі на цьому фото.",
+    "INSUFFICIENT_COINS": "Недостатньо монет!",
+    "MASCOT_NOT_FOUND": "Маскота не знайдено.",
+    "MASCOT_NOT_FOR_SALE": "Цей маскот не продається.",
+    "MASCOT_ALREADY_OWNED": "У вас вже є цей маскот.",
+    "MASCOT_NOT_OWNED": "Ви не можете екіпірувати маскота, якого у вас немає.",
+    "MASCOT_GENERATION_FAILED": "Помилка створення маскота. Спробуйте ще раз.",
+    "INVALID_WEEK_START_DATE": "Некоректна дата початку тижня.",
+    "DAY_NOT_FOUND": "Вказаного дня не існує.",
+    "QUEST_NOT_FOUND": "Квест не знайдено.",
+    "BATCH_ALREADY_USED": "Ви вже почали готувати інший рецепт з цієї генерації.",
+    "STEP_VERIFICATION_NOT_ALLOWED_IN_VIEW_MODE": "Перевірка фото недоступна в режимі перегляду.",
+    "INVALID_STEP_NUMBER": "Некоректний номер кроку.",
+    "PHOTO_ONLY_ALLOWED_ON_FINAL_STEP": "Фото можна додавати лише на останньому кроці.",
+    "STEP_ALREADY_VERIFIED": "Цей крок вже перевірено.",
+    "SESSION_NOT_FOUND": "Сесію готування не знайдено.",
+    "NOT_SESSION_OWNER": "Це не ваша сесія готування.",
+    "SESSION_NOT_ACTIVE": "Сесія готування вже завершена або скасована.",
+    "CANNOT_BATTLE_SELF": "Ви не можете викликати на батл самого себе.",
+    "RECIPE_NOT_VALID_FOR_BATTLE": "Цей рецепт не можна використовувати для батлу.",
+    "RECIPE_ALREADY_USED_IN_BATTLE": "Цей рецепт вже був використаний.",
+    "BATTLE_NOT_FOUND": "Батл не знайдено.",
+    "BATTLE_CANNOT_BE_ACCEPTED": "Цей батл вже неможливо прийняти.",
+    "NOT_BATTLE_PARTICIPANT": "Ви не є учасником цього батлу.",
+    "BATTLE_ALREADY_ACCEPTED": "Ви вже прийняли цей виклик.",
+    "BATTLE_ALREADY_FINISHED": "Цей батл вже завершено.",
+    "OPPONENT_NOT_FOUND": "Суперника не знайдено.",
+    "EXTERNAL_API_ERROR": "Помилка зовнішнього сервісу. Спробуйте пізніше.",
+    "CLOUD_STORAGE_ERROR": "Помилка завантаження файлу. Перевірте з'єднання."
   }
 }

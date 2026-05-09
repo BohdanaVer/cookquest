@@ -10,6 +10,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 @Slf4j
 @RestControllerAdvice
@@ -66,32 +71,93 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
-}
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.warn("Некоректний запит: {}", ex.getMessage());
 
-/* приклад
+        ErrorResponse response = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .errorCode(ErrorCode.INVALID_REQUEST.name())
+                .message(ex.getMessage())
+                .build();
 
-package com.cookquest.user.service;
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
 
-import com.cookquest.common.exception.AppException;
-import com.cookquest.common.exception.ErrorCode;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoHandlerFoundException(NoHandlerFoundException ex) {
+        ErrorResponse response = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .errorCode(ErrorCode.NOT_FOUND.name())
+                .message("Маршрут не знайдено")
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
 
-@Service
-public class UserService {
+    @ExceptionHandler({
+            HttpRequestMethodNotSupportedException.class,
+            MissingServletRequestParameterException.class
+    })
+    public ResponseEntity<ErrorResponse> handleBadRequestExceptions(Exception ex) {
+        ErrorResponse response = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .errorCode(ErrorCode.INVALID_REQUEST.name())
+                .message(ex.getMessage())
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
 
-    public void registerUser(String email) {
-        boolean emailExists = true; // Уявимо, що ми знайшли емейл в БД
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex) {
+        ErrorResponse response = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.FORBIDDEN.value())
+                .errorCode(ErrorCode.UNAUTHORIZED_ACCESS.name())
+                .message("Доступ заборонено")
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
 
-        if (emailExists) {
-            // Просто кидаємо помилку. Логер в GlobalExceptionHandler сам її запише!
-            throw new AppException(
-                ErrorCode.EMAIL_ALREADY_EXISTS,
-                "Користувач з таким email вже існує",
-                HttpStatus.CONFLICT // 409 статус
-            );
-        }
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
+        ErrorResponse response = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .errorCode(ErrorCode.UNAUTHORIZED_ACCESS.name())
+                .message("Неавторизований доступ")
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
 }
+
+/*
+ * приклад
+ * 
+ * package com.cookquest.user.service;
+ * 
+ * import com.cookquest.common.exception.AppException;
+ * import com.cookquest.common.exception.ErrorCode;
+ * import org.springframework.http.HttpStatus;
+ * import org.springframework.stereotype.Service;
+ * 
+ * @Service
+ * public class UserService {
+ * 
+ * public void registerUser(String email) {
+ * boolean emailExists = true; // Уявимо, що ми знайшли емейл в БД
+ * 
+ * if (emailExists) {
+ * // Просто кидаємо помилку. Логер в GlobalExceptionHandler сам її запише!
+ * throw new AppException(
+ * ErrorCode.EMAIL_ALREADY_EXISTS,
+ * "Користувач з таким email вже існує",
+ * HttpStatus.CONFLICT // 409 статус
+ * );
+ * }
+ * }
+ * }
  */

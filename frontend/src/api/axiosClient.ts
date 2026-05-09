@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { toast } from 'sonner';
 
+import i18n from '../lib/i18n';
+
 export const api = axios.create({
     baseURL: 'http://localhost:8080', 
     headers: {
@@ -22,7 +24,7 @@ api.interceptors.response.use(
         const backendError = error.response?.data;
 
         if (!error.response) {
-            toast.error("Сервер недоступний. Перевірте з'єднання.");
+            toast.error(i18n.t("server_unreachable", "Сервер недоступний. Перевірте з'єднання.") as string);
             return Promise.reject(error);
         }
 
@@ -30,9 +32,8 @@ api.interceptors.response.use(
             return Promise.reject(backendError);
         }
 
-        // отут треба потім поміняти на нормальне повідомлення
         if (backendError?.errorCode) {
-            toast.error(backendError.errorCode); 
+            toast.error(i18n.t(backendError.errorCode, backendError.message || backendError.errorCode) as string); 
         }
 
         return Promise.reject(error);
