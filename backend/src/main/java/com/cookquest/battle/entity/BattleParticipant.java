@@ -37,5 +37,8 @@ public class BattleParticipant {
     private Integer earnedCoins; 
 
     @Column(name = "is_finished")
-    private boolean isFinished; 
+    private boolean isFinished;
+
+    @Column(name = "is_withdrawn", nullable = false, columnDefinition = "boolean not null default false")
+    private boolean isWithdrawn;
 }

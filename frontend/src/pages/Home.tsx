@@ -32,11 +32,20 @@ interface BattleResponse {
     battleId: number;
     status: string;
     recipePreview: {
-        id: string;
+        recipeId?: string;
         name: string;
+        description?: string;
+        difficulty?: string;
+        points?: number;
+        cookingTimeMinutes?: number;
+        cuisine?: string;
+        dietaryTags?: string[];
+        ingredients?: any[];
+        stepsCount?: number;
     };
     mySession?: {
         sessionId: number;
+        recipe?: any;
     };
     opponentName: string;
     isOpponentFinished: boolean;
@@ -248,9 +257,31 @@ export default function Home() {
                         {activeBattles.slice(0, isBattlesExpanded ? activeBattles.length : 1).map((battle, index) => {
                             const isChallenged = battle.status === 'WAITING_FOR_OPPONENT' && !battle.mySession;
                             
+                            const goToRecipePreview = () => {
+                                    const recipeId = battle.recipePreview.recipeId;
+                                    if (!recipeId) return;
+                                    sessionStorage.setItem('current_viewing_recipe', JSON.stringify({
+                                        id: recipeId,
+                                        name: battle.recipePreview.name,
+                                        description: battle.recipePreview.description ?? '',
+                                        difficulty: battle.recipePreview.difficulty ?? '',
+                                        points: battle.recipePreview.points ?? 0,
+                                        cookingTimeMinutes: battle.recipePreview.cookingTimeMinutes ?? 30,
+                                        cuisine: battle.recipePreview.cuisine ?? '',
+                                        dietaryTags: battle.recipePreview.dietaryTags ?? [],
+                                        ingredients: battle.recipePreview.ingredients ?? [],
+                                        steps: [],
+                                        stepCount: battle.recipePreview.stepsCount ?? 0,
+                                    }));
+                                    navigate(`/recipe/${recipeId}?battle=${battle.battleId}&pending=true`);
+                                };
+
                             return (
                                 <div key={battle.battleId} className={`flex items-center justify-between gap-4 ${index > 0 ? "pt-4 border-t border-white/5" : ""}`}>
-                                    <div className="flex-1 min-w-0">
+                                    <div
+                                        className={`flex-1 min-w-0 ${isChallenged && battle.recipeId ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                                        onClick={isChallenged ? goToRecipePreview : undefined}
+                                    >
                                         <p className="font-bold text-white text-sm truncate">{battle.recipePreview.name}</p>
                                         <div className="flex items-center gap-1.5 mt-1 text-[11px] text-gray-500 font-medium">
                                             <span className="truncate">{t('battle.opponent', 'Суперник')}: {battle.opponentName}</span>
@@ -260,37 +291,13 @@ export default function Home() {
                                             </span>
                                         </div>
                                     </div>
-                                    
+
                                     {isChallenged ? (
                                         <div className="flex gap-2 shrink-0">
                                             <button
-                                                onClick={async () => {
-                                                    try {
-                                                        const res = await api.post(`/api/v1/battles/${battle.battleId}/accept`);
-                                                        const acceptedBattle = res.data;
-                                                        // Витягуємо recipeId з сесії
-                                                        if (acceptedBattle.mySession?.recipe) {
-                                                            let recipeData: any;
-                                                            if (typeof acceptedBattle.mySession.recipe === 'string') {
-                                                                recipeData = JSON.parse(acceptedBattle.mySession.recipe);
-                                                            } else {
-                                                                recipeData = acceptedBattle.mySession.recipe;
-                                                            }
-                                                            const recipeId = recipeData.id || recipeData.recipeId;
-                                                            if (recipeId) {
-                                                                // Кешуємо рецепт щоб сторінка деталей рецепту могла його відобразити
-                                                                sessionStorage.setItem('current_viewing_recipe', JSON.stringify(recipeData));
-                                                                navigate(`/recipe/${recipeId}?battle=${battle.battleId}`);
-                                                                return;
-                                                            }
-                                                        }
-                                                        // Fallback: якщо не вдалось дістати recipeId
-                                                        window.location.reload();
-                                                    } catch (e) {
-                                                        console.error(e);
-                                                    }
-                                                }}
+                                                onClick={goToRecipePreview}
                                                 className="bg-green-500/20 hover:bg-green-500/30 text-green-500 p-2 rounded-xl transition-colors"
+                                                title={t('battle.viewRecipe', 'Переглянути рецепт')}
                                             >
                                                 <Check size={16} />
                                             </button>
@@ -304,17 +311,36 @@ export default function Home() {
                                                     }
                                                 }}
                                                 className="bg-red-500/20 hover:bg-red-500/30 text-red-500 p-2 rounded-xl transition-colors"
+                                                title={t('battle.decline', 'Відхилити')}
                                             >
                                                 <X size={16} />
                                             </button>
                                         </div>
                                     ) : (
-                                        <Link
-                                            to={battle.mySession ? `/cook/${battle.mySession.sessionId}?mode=resume&battle=${battle.battleId}` : '#'}
-                                            className="shrink-0 bg-[#ff3366]/10 hover:bg-[#ff3366]/20 text-[#ff3366] text-xs font-bold px-4 py-2 rounded-xl transition-colors"
-                                        >
-                                            {t('home.continue', 'Продовжити')}
-                                        </Link>
+                                        <div className="flex gap-2 shrink-0 items-center">
+                                            {battle.mySession && (
+                                                <Link
+                                                    to={`/cook/${battle.mySession.sessionId}?mode=resume&battle=${battle.battleId}`}
+                                                    className="bg-[#ff3366]/10 hover:bg-[#ff3366]/20 text-[#ff3366] text-xs font-bold px-4 py-2 rounded-xl transition-colors"
+                                                >
+                                                    {t('home.continue', 'Продовжити')}
+                                                </Link>
+                                            )}
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await api.post(`/api/v1/battles/${battle.battleId}/cancel`);
+                                                        setActiveBattles(prev => prev.filter(b => b.battleId !== battle.battleId));
+                                                    } catch (e) {
+                                                        console.error(e);
+                                                    }
+                                                }}
+                                                className="bg-red-500/20 hover:bg-red-500/30 text-red-500 p-2 rounded-xl transition-colors"
+                                                title={t('battle.cancel', 'Скасувати батл')}
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             );

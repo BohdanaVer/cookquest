@@ -18,6 +18,7 @@ import com.cookquest.profile.entity.Language;
 import com.cookquest.profile.entity.UserProfile;
 import com.cookquest.profile.service.ProfileService;
 import com.cookquest.common.ai.GroqClient;
+import com.cookquest.cooking.integration.event.CookingSessionCancelledEvent;
 import com.cookquest.cooking.integration.event.CookingSessionCompletedEvent;
 import com.cookquest.quest.service.QuestService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -125,6 +126,7 @@ public class CookingService {
         CookingSession session = getActiveSessionStrict(sessionId);
         session.setStatus(SessionStatus.CANCELLED);
         sessionRepository.save(session);
+        eventPublisher.publishEvent(new CookingSessionCancelledEvent(session.getId(), session.getUser().getId()));
     }
 
     @Transactional(readOnly = true)

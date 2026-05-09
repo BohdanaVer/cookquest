@@ -3,6 +3,7 @@ package com.cookquest.battle.dto;
 import java.util.List;
 
 public record RecipePreviewDto(
+        String recipeId,
         String name,
         String description,
         String difficulty,

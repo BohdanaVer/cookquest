@@ -16,6 +16,7 @@ import com.cookquest.battle.repository.BattleRepository;
 import com.cookquest.common.exception.AppException;
 import com.cookquest.common.exception.ErrorCode;
 import com.cookquest.cooking.dto.CookingSessionDto;
+import com.cookquest.cooking.integration.event.CookingSessionCancelledEvent;
 import com.cookquest.cooking.integration.event.CookingSessionCompletedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -159,6 +161,22 @@ public class BattleService {
         submitParticipantInternal(participant.getBattle().getId(), event.userId());
     }
 
+    @EventListener
+    @Transactional
+    public void onCookingSessionCancelled(CookingSessionCancelledEvent event) {
+        BattleParticipant participant = participantRepository.findByCookingSessionId(event.sessionId());
+
+        if (participant == null || participant.isFinished() || participant.isWithdrawn()) {
+            return;
+        }
+
+        log.info("Сесія {} скасована — автоматично знімаємо учасника з батлу {}",
+                event.sessionId(), participant.getBattle().getId());
+
+        withdrawParticipant(participant);
+        checkAndEvaluateIfAllDone(participant.getBattle());
+    }
+
     @Transactional
     protected BattleResponse submitParticipantInternal(Long battleId, Long userId) {
         Battle battle = battleRepository.findById(battleId)
@@ -232,6 +250,7 @@ public class BattleService {
                         () -> new AppException(ErrorCode.BATTLE_NOT_FOUND, "Батл не знайдено", HttpStatus.NOT_FOUND));
     }
 
+    @Transactional
     public List<BattleResponse> getActiveBattles() {
         Long userId = getCurrentUserId();
         List<BattleStatus> activeStatuses = List.of(
@@ -239,7 +258,32 @@ public class BattleService {
                 BattleStatus.ACTIVE,
                 BattleStatus.JUDGING);
         List<Battle> battles = battleRepository.findActiveBattlesByUserId(userId, activeStatuses);
-        return battles.stream().map(this::mapToResponse).toList();
+        List<BattleResponse> result = new ArrayList<>();
+        for (Battle battle : battles) {
+            BattleParticipant me = participantRepository.findByBattleIdAndUserId(battle.getId(), userId);
+            if (me == null || me.isWithdrawn()) continue;
+
+            // Якщо сесія більше не існує в БД (hard-deleted) — авто-вихід
+            if (me.getCookingSessionId() != null && !me.isFinished()
+                    && !cookingBattleApi.sessionExists(me.getCookingSessionId())) {
+                log.warn("Сесія {} видалена з БД — авто-вихід з батлу {} для юзера {}",
+                        me.getCookingSessionId(), battle.getId(), userId);
+                withdrawParticipant(me);
+                checkAndEvaluateIfAllDone(battle);
+                continue;
+            }
+
+            try {
+                result.add(mapToResponse(battle));
+            } catch (Exception e) {
+                log.warn("Не вдалось відобразити батл {} для юзера {} — авто-вихід: {}", battle.getId(), userId, e.getMessage());
+                if (!me.isFinished()) {
+                    withdrawParticipant(me);
+                    checkAndEvaluateIfAllDone(battle);
+                }
+            }
+        }
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -267,40 +311,46 @@ public class BattleService {
             throw new AppException(ErrorCode.NOT_BATTLE_PARTICIPANT, "Ви не є учасником цього батлу", HttpStatus.FORBIDDEN);
         }
 
-        if (player.isFinished()) {
+        if (player.isWithdrawn() || player.isFinished()) {
             return mapToResponse(battle);
         }
 
+        cookingBattleApi.cancelSession(player.getCookingSessionId());
+        withdrawParticipant(player);
+        checkAndEvaluateIfAllDone(battle);
+
+        return mapToResponse(battle);
+    }
+
+    private void withdrawParticipant(BattleParticipant player) {
+        player.setWithdrawn(true);
         player.setQualityScore(0);
         player.setSpeedScore(0);
         player.setTotalScore(0);
         player.setFinished(true);
         participantRepository.save(player);
+    }
 
-        List<BattleParticipant> participants = participantRepository.findByBattleId(battleId);
-        boolean allFinished = participants.stream().allMatch(BattleParticipant::isFinished);
-
-        if (allFinished) {
-            BattleParticipant p1 = participants.get(0);
-            BattleParticipant p2 = participants.get(1);
-            int refTime = recipeBattleApi.getCookingTimeMinutes(battle.getRecipeId());
-
-            evaluationService.evaluateBattle(battle, p1, p2, refTime);
-
-            participantRepository.save(p1);
-            participantRepository.save(p2);
-            battleRepository.save(battle);
-
-            if (battle.getStatus() == BattleStatus.COMPLETED) {
-                economyBattleApi.awardBattleResults(p1.getUserId(), p1.getEarnedXp(), p1.getEarnedCoins());
-                economyBattleApi.awardBattleResults(p2.getUserId(), p2.getEarnedXp(), p2.getEarnedCoins());
-            }
-        } else {
-            battle.setStatus(BattleStatus.JUDGING);
-            battleRepository.save(battle);
+    private void checkAndEvaluateIfAllDone(Battle battle) {
+        if (battle.getStatus() == BattleStatus.COMPLETED || battle.getStatus() == BattleStatus.CANCELLED) {
+            return;
         }
-
-        return mapToResponse(battle);
+        List<BattleParticipant> participants = participantRepository.findByBattleId(battle.getId());
+        boolean allFinished = participants.stream().allMatch(BattleParticipant::isFinished);
+        if (!allFinished) {
+            return;
+        }
+        BattleParticipant p1 = participants.get(0);
+        BattleParticipant p2 = participants.get(1);
+        int refTime = recipeBattleApi.getCookingTimeMinutes(battle.getRecipeId());
+        evaluationService.evaluateBattle(battle, p1, p2, refTime);
+        participantRepository.save(p1);
+        participantRepository.save(p2);
+        battleRepository.save(battle);
+        if (battle.getStatus() == BattleStatus.COMPLETED) {
+            economyBattleApi.awardBattleResults(p1.getUserId(), p1.getEarnedXp(), p1.getEarnedCoins());
+            economyBattleApi.awardBattleResults(p2.getUserId(), p2.getEarnedXp(), p2.getEarnedCoins());
+        }
     }
 
     private BattleResponse mapToResponse(Battle battle) {
@@ -323,7 +373,11 @@ public class BattleService {
 
         CookingSessionDto mySessionDto = null;
         if (me.getCookingSessionId() != null) {
-            mySessionDto = cookingBattleApi.getSessionDetails(me.getCookingSessionId());
+            try {
+                mySessionDto = cookingBattleApi.getSessionDetails(me.getCookingSessionId());
+            } catch (Exception e) {
+                log.warn("Сесія {} недоступна для батлу {}: {}", me.getCookingSessionId(), battle.getId(), e.getMessage());
+            }
         }
 
         String opponentName = userBattleApi.getUsernameById(opponent.getUserId());

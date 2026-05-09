@@ -84,9 +84,16 @@ public class CookingBattleApiImpl implements CookingBattleApi {
 
     @Override
     public boolean isSessionCancelled(Long sessionId) {
-        CookingSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Сесію не знайдено", HttpStatus.NOT_FOUND));
-        return session.getStatus() == SessionStatus.CANCELLED;
+        if (sessionId == null) return true;
+        return sessionRepository.findById(sessionId)
+                .map(s -> s.getStatus() == SessionStatus.CANCELLED)
+                .orElse(true); // відсутня сесія = скасована
+    }
+
+    @Override
+    public boolean sessionExists(Long sessionId) {
+        if (sessionId == null) return false;
+        return sessionRepository.existsById(sessionId);
     }
 
     @Override
@@ -135,6 +142,18 @@ public class CookingBattleApiImpl implements CookingBattleApi {
             return false;
         }
         return usedBatchRepository.existsByUserIdAndBatchId(userId, recipe.batchId());
+    }
+
+    @Transactional
+    @Override
+    public void cancelSession(Long sessionId) {
+        if (sessionId == null) return;
+        sessionRepository.findById(sessionId).ifPresent(session -> {
+            if (session.getStatus() == SessionStatus.IN_PROGRESS) {
+                session.setStatus(SessionStatus.CANCELLED);
+                sessionRepository.save(session);
+            }
+        });
     }
 }
 

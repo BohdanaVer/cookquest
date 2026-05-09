@@ -16,4 +16,8 @@ public interface CookingBattleApi {
     CookingSessionDto getSessionDetails(Long sessionId);
 
     boolean isRecipeAlreadyUsed(Long userId, String recipeId);
+
+    void cancelSession(Long sessionId);
+
+    boolean sessionExists(Long sessionId);
 }

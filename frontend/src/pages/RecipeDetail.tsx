@@ -17,6 +17,7 @@ export default function RecipeDetail() {
     const [searchParams] = useSearchParams()
     const isQuest = searchParams.get('quest') === 'true'
     const incomingBattleId = searchParams.get('battle')
+    const isPendingBattle = searchParams.get('pending') === 'true'
 
     const [recipe, setRecipe] = useState<Recipe | null>(null)
     const [isIngredientsExpanded, setIsIngredientsExpanded] = useState(true)
@@ -226,14 +227,42 @@ export default function RecipeDetail() {
             </div>
 
             <div className="fixed bottom-[80px] left-0 right-0 p-4 z-10 pointer-events-none">
-                <div className={cn("max-w-md mx-auto gap-3 pointer-events-auto", incomingBattleId ? "flex" : "grid grid-cols-2")}>
+                <div className={cn("max-w-md mx-auto gap-3 pointer-events-auto", (incomingBattleId && !isPendingBattle) ? "flex" : "grid grid-cols-2")}>
 
-                    {incomingBattleId ? (
-                        /* Battle accepted — show single full-width Start Battle button */
+                    {incomingBattleId && isPendingBattle ? (
+                        /* Pending invite — let user decide to accept or decline */
+                        <>
+                            <button
+                                onClick={() => navigate('/home')}
+                                className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white font-bold py-4 rounded-2xl transition-all active:scale-95"
+                            >
+                                {t('battle.decline', 'Відхилити')}
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const res = await api.post(`/api/v1/battles/${incomingBattleId}/accept`);
+                                        const sessionId = res.data.mySession?.sessionId;
+                                        if (sessionId) {
+                                            navigate(`/cook/${sessionId}?mode=resume&battle=${incomingBattleId}`);
+                                        } else {
+                                            navigate('/home');
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                        toast.error(t('battle.acceptError', 'Помилка прийняття батлу'));
+                                    }
+                                }}
+                                className="flex items-center justify-center gap-2 bg-[#ff3366] hover:bg-[#ff3366]/90 text-white font-bold py-4 rounded-2xl shadow-lg shadow-[#ff3366]/20 transition-all active:scale-95"
+                            >
+                                <Swords size={18} /> {t('battle.accept', 'Прийняти')} ⚔️
+                            </button>
+                        </>
+                    ) : incomingBattleId && !isPendingBattle ? (
+                        /* Battle already accepted — go to cooking session */
                         <button
                             onClick={async () => {
                                 try {
-                                    // Fetch battle to get my session ID
                                     const battleRes = await api.get(`/api/v1/battles/${incomingBattleId}`);
                                     const battle = battleRes.data;
                                     if (battle.mySession?.sessionId) {

@@ -69,6 +69,7 @@ public class RecipeBattleApiImpl implements RecipeBattleApi {
             List<Object> ingredients = objectMapper.convertValue(rootNode.get("ingredients"), List.class);
 
             return new RecipePreviewDto(
+                    recipeId,
                     rootNode.get("name").asText(),
                     rootNode.get("description").asText(),
                     rootNode.get("difficulty").asText(),
