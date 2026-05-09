@@ -119,7 +119,11 @@ export default function Profile() {
         const fetchHistoryRecipes = async () => {
             try {
                 const historyResp = await api.get('/api/v1/recipes/history');
-                setHistoryRecipes(historyResp.data || []);
+                const limitedHistory = (historyResp.data || [])
+                    .slice(-25)
+                    .reverse();
+
+                setHistoryRecipes(limitedHistory);
             } catch (error) {
                 console.error("Помилка завантаження історії генерацій", error);
             } finally {
@@ -291,7 +295,7 @@ export default function Profile() {
                                 {isHistoryExpanded ? (
                                     <><ChevronUp size={14} /> {t('common.collapse', 'Згорнути')}</>
                                 ) : (
-                                    <><ChevronDown size={14} /> {t('common.expand', 'Показати всі')} ({historyRecipes.length - 1})</>
+                                    <><ChevronDown size={14} /> {t('profile.showRecent', 'Показати останні')} ({historyRecipes.length - 1})</>
                                 )}
                             </button>
                         )}

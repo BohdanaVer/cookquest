@@ -134,7 +134,7 @@ public class MascotService {
         profileMascotApi.updateActiveMascot(userId, mascotId);
     }
 
-  /*
+
     @Transactional
     public MascotCatalogDto generateCustomMascot(MascotConfig config) {
         Long userId = currentUserService.getCurrentUser().getId();
@@ -156,8 +156,14 @@ public class MascotService {
             String translatedExtras = groqClient.translateToEnglish(config.extraDetails());
 
             MascotConfig translatedConfig = new MascotConfig(
-                    config.name(), config.type(), translatedSubject, config.style(),
-                    config.personality(), config.color(), translatedExtras
+                    config.name(),
+                    config.description(),
+                    config.type(),
+                    translatedSubject,
+                    config.style(),
+                    config.personality(),
+                    config.color(),
+                    translatedExtras
             );
 
             var promptData = promptBuilder.buildPrompt(translatedConfig, null);
@@ -215,77 +221,77 @@ public class MascotService {
             throw new AppException(ErrorCode.MASCOT_GENERATION_FAILED, "Помилка генерації: " + cause.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-*/
+
 
     // TODO: ЗАМІНИТИ НА СПРАВЖНІЙ МЕТОД ПЕРЕД РЕЛІЗОМ
-    @Transactional
-    public MascotCatalogDto generateCustomMascot(MascotConfig config) {
-        Long userId = currentUserService.getCurrentUser().getId();
-
-        final int GENERATION_PRICE = generationPrice;
-
-        if (!economyMascotApi.hasEnoughCoins(userId, generationPrice)) {
-            throw new AppException(
-                    ErrorCode.INSUFFICIENT_COINS,
-                    "Недостатньо монет для генерації",
-                    HttpStatus.BAD_REQUEST
-            );
-        }
-
-        economyMascotApi.deductCoins(userId, generationPrice);
-
-        log.info("Викликано MOCK-генерацію маскота для юзера {}. ШІ та Cloudinary вимкнено.", userId);
-
-        try {
-            Thread.sleep(3000);
-
-            String mockCloudUrl = "https://res.cloudinary.com/dhw5at0ia/image/upload/v1778081614/mascots/custom_d9e8459c-7c85-410d-ae6f-a4c8efd693dd.png";
-
-            String customDesc = config.description() != null ? config.description() : "";
-            if (customDesc.length() > 50) {
-                customDesc = customDesc.substring(0, 47) + "...";
-            }
-
-            Mascot mascot = Mascot.builder()
-                    .name(config.name() != null && !config.name().isBlank()
-                            ? config.name()
-                            : "Кастомний Маскот (Mock)")
-                    .description(customDesc)
-                    .type(MascotType.CUSTOM)
-                    .rarity(MascotRarity.LEGENDARY)
-                    .imageUrlHappy(mockCloudUrl)
-                    .imageUrlNeutral(mockCloudUrl)
-                    .imageUrlSad(mockCloudUrl)
-                    .price(0)
-                    .creatorId(userId)
-                    .build();
-
-            mascot = mascotRepository.save(mascot);
-
-            UserMascot userMascot = UserMascot.builder()
-                    .userId(userId)
-                    .mascot(mascot)
-                    .acquiredAt(LocalDateTime.now())
-                    .build();
-            userMascotRepository.save(userMascot);
-
-            log.info("Mock-маскот успішно доданий в інвентар юзера з ID: {}", mascot.getId());
-
-            return new MascotCatalogDto(
-                    mascot.getId(), mascot.getName(), mascot.getDescription(), mascot.getType().name(),
-                    mascot.getImageUrlHappy(), mascot.getImageUrlNeutral(), mascot.getImageUrlSad(),
-                    mascot.getPrice(), true, false
-            );
-
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new AppException(ErrorCode.INTERNAL_ERROR, "Перервано очікування MOCK-генерації", HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (Exception e) {
-            log.error("Помилка генерації маскота", e);
-            Throwable cause = e.getCause() != null ? e.getCause() : e;
-            throw new AppException(ErrorCode.MASCOT_GENERATION_FAILED, "Помилка генерації: " + cause.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
+//    @Transactional
+//    public MascotCatalogDto generateCustomMascot(MascotConfig config) {
+//        Long userId = currentUserService.getCurrentUser().getId();
+//
+//        final int GENERATION_PRICE = generationPrice;
+//
+//        if (!economyMascotApi.hasEnoughCoins(userId, generationPrice)) {
+//            throw new AppException(
+//                    ErrorCode.INSUFFICIENT_COINS,
+//                    "Недостатньо монет для генерації",
+//                    HttpStatus.BAD_REQUEST
+//            );
+//        }
+//
+//        economyMascotApi.deductCoins(userId, generationPrice);
+//
+//        log.info("Викликано MOCK-генерацію маскота для юзера {}. ШІ та Cloudinary вимкнено.", userId);
+//
+//        try {
+//            Thread.sleep(3000);
+//
+//            String mockCloudUrl = "https://res.cloudinary.com/dhw5at0ia/image/upload/v1778081614/mascots/custom_d9e8459c-7c85-410d-ae6f-a4c8efd693dd.png";
+//
+//            String customDesc = config.description() != null ? config.description() : "";
+//            if (customDesc.length() > 50) {
+//                customDesc = customDesc.substring(0, 47) + "...";
+//            }
+//
+//            Mascot mascot = Mascot.builder()
+//                    .name(config.name() != null && !config.name().isBlank()
+//                            ? config.name()
+//                            : "Кастомний Маскот (Mock)")
+//                    .description(customDesc)
+//                    .type(MascotType.CUSTOM)
+//                    .rarity(MascotRarity.LEGENDARY)
+//                    .imageUrlHappy(mockCloudUrl)
+//                    .imageUrlNeutral(mockCloudUrl)
+//                    .imageUrlSad(mockCloudUrl)
+//                    .price(0)
+//                    .creatorId(userId)
+//                    .build();
+//
+//            mascot = mascotRepository.save(mascot);
+//
+//            UserMascot userMascot = UserMascot.builder()
+//                    .userId(userId)
+//                    .mascot(mascot)
+//                    .acquiredAt(LocalDateTime.now())
+//                    .build();
+//            userMascotRepository.save(userMascot);
+//
+//            log.info("Mock-маскот успішно доданий в інвентар юзера з ID: {}", mascot.getId());
+//
+//            return new MascotCatalogDto(
+//                    mascot.getId(), mascot.getName(), mascot.getDescription(), mascot.getType().name(),
+//                    mascot.getImageUrlHappy(), mascot.getImageUrlNeutral(), mascot.getImageUrlSad(),
+//                    mascot.getPrice(), true, false
+//            );
+//
+//        } catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//            throw new AppException(ErrorCode.INTERNAL_ERROR, "Перервано очікування MOCK-генерації", HttpStatus.INTERNAL_SERVER_ERROR);
+//        } catch (Exception e) {
+//            log.error("Помилка генерації маскота", e);
+//            Throwable cause = e.getCause() != null ? e.getCause() : e;
+//            throw new AppException(ErrorCode.MASCOT_GENERATION_FAILED, "Помилка генерації: " + cause.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+//        }
+//    }
 
     @Transactional(readOnly = true)
     public java.util.Map<Long, String> getMascotHappyImagesMap(java.util.List<Long> mascotIds) {
