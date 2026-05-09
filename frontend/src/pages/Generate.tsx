@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { Camera, Shuffle, X, Upload, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react'
 import { cn } from '../lib/utils'
 import Mascot from '../components/mascot'
-import { useActiveMascot } from '../components/mascot-provider'
 import { useTranslation } from 'react-i18next'
 import { api } from '../api/axiosClient'
 
@@ -35,7 +34,6 @@ export default function Generate() {
     const navigate = useNavigate()
     const location = useLocation()
     const searchParams = new URLSearchParams(location.search)
-    const activeMascot = useActiveMascot()
 
     const [mode, setMode] = useState<'photo' | 'random'>(() => sessionStorage.getItem('gen_mode') as 'photo' | 'random' || 'photo')
     const [step, setStep] = useState<'input' | 'ingredients' | 'recipes'>(() => sessionStorage.getItem('gen_step') as 'input' | 'ingredients' | 'recipes' || 'input')
